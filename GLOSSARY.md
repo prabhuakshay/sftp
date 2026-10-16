@@ -24,6 +24,10 @@ _Avoid_: Edit session, checkout, temp file, sync
 The files moved by one upload, download or drop. Conflicts are answered and failures are summarised per Batch.
 _Avoid_: Job, task, transfer group
 
+**Transfer**:
+One upload or download the user asked for, shown as a single row in the transfer dock. A folder is one Transfer, however many files it holds.
+_Avoid_: Job, task, queue item
+
 **Tab**:
 One browsing view showing a single Host at a current remote folder. Several Tabs may show the same Host.
 _Avoid_: Session, window, pane
