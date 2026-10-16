@@ -1,0 +1,17 @@
+# sftp
+
+A Windows desktop file browser for the user's own servers, reached over SSH. It exists so remote filesystems can be browsed and managed as easily as local folders.
+
+## Language
+
+**Host**:
+A server the app can connect to, defined by a `Host` entry in the user's SSH config and named by its alias. The app reads Hosts but never edits the SSH config.
+_Avoid_: Site, server profile, bookmark, connection
+
+**Quick Connect**:
+Connecting to a server typed as `user@host[:port]` that has no Host entry. Nothing about it is saved.
+_Avoid_: Ad hoc connection, temporary site
+
+**Tab**:
+One browsing view showing a single Host at a current remote folder. Several Tabs may show the same Host.
+_Avoid_: Session, window, pane
