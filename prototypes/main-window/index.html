@@ -1,0 +1,2063 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throwaway. Answers "Main window prototype" (prabhuakshay/sftp#6):
+  what should the main window look like and how should it behave?
+
+  Three structurally different main windows, switchable via ?variant=A|B|C
+  (floating bar at the bottom, or the ← / → keys). Add &theme=dark for dark mode.
+    A · Explorer   – Windows 11 Explorer: tabs in the title bar, command bar, Host sidebar, details pane, transfer dock
+    B · Workbench  – VS Code: activity bar, Ctrl+K command palette, bottom panel (Transfers / Output / Log), status bar
+    C · Focus      – content first: no sidebar, Host launcher on new Tabs, inspector on selection, transfers popover
+
+  Everything is fake and in memory: no SSH, no Tauri. Double-click the file to open it in a browser.
+  The stack decision is React + Tailwind + shadcn/ui; this uses React + Tailwind from a CDN so it runs with no build.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main window prototype</title>
+<link rel="icon" href="../../branding/svg/favicon.svg">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      colors: {
+        bg: 'var(--bg)', panel: 'var(--panel)', side: 'var(--side)', fg: 'var(--fg)', muted: 'var(--muted)',
+        line: 'var(--line)', hover: 'var(--hover)', sel: 'var(--sel)', accent: 'var(--accent)', chip: 'var(--chip)',
+        ok: 'var(--ok)', warn: 'var(--warn)', bad: 'var(--bad)', term: 'var(--term)', shell: '#1A2025',
+      },
+      fontFamily: {
+        sans: ['"Segoe UI Variable Text"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        mono: ['"Cascadia Code"', '"Cascadia Mono"', 'Consolas', 'monospace'],
+      },
+    } },
+  };
+</script>
+<style>
+  /* Brand: Oxide #C24E1C, Oxide Bright #E3693A, Shell #1A2025, Slate #5B6670, Fog #97A3AD, Mist #ECEFF1 */
+  :root {
+    --bg: #F4F6F7; --panel: #FFFFFF; --side: #ECEFF1; --fg: #1A2025; --muted: #5B6670; --line: #DCE1E5;
+    --hover: #EDF0F2; --sel: #FBE3D6; --accent: #C24E1C; --chip: #E3E8EB; --ok: #2E9B68; --warn: #C08A1E;
+    --bad: #CF3F3F; --term: #F7F8F9; --str: #2C8A55; --num: #2F6FB3;
+    color-scheme: light;
+  }
+  .dark {
+    --bg: #101417; --panel: #171C20; --side: #13181B; --fg: #ECEFF1; --muted: #97A3AD; --line: #283036;
+    --hover: #20272C; --sel: #3D2A21; --accent: #E3693A; --chip: #232B31; --ok: #3DBE85; --warn: #D9A93A;
+    --bad: #E5605F; --term: #0E1215; --str: #7CC892; --num: #7EAEE8;
+    color-scheme: dark;
+  }
+  html, body, #root { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; font-size: 13px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: content-box; border: 3px solid transparent; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  button { cursor: default; }
+  .font-mono { font-variant-ligatures: none; }
+  input::placeholder { color: var(--muted); }
+  @keyframes slidein { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .slidein { animation: slidein .16s ease-out; }
+  @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .rise { animation: rise .16s ease-out; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useLayoutEffect, forwardRef, Fragment } = React;
+
+/* ===================================================================== icons (lucide paths) */
+const ICONS = {
+  chevronLeft: 'm15 18-6-6 6-6', chevronRight: 'm9 18 6-6-6-6', chevronDown: 'm6 9 6 6 6-6', chevronUp: 'm18 15-6-6-6 6',
+  arrowLeft: 'M19 12H5 M12 19l-7-7 7-7', arrowRight: 'M5 12h14 M12 5l7 7-7 7', arrowUp: 'm5 12 7-7 7 7 M12 19V5',
+  refresh: 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16 M8 16H3v5',
+  folder: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+  file: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z M14 2v4a2 2 0 0 0 2 2h4',
+  fileText: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z M14 2v4a2 2 0 0 0 2 2h4 M10 9H8 M16 13H8 M16 17H8',
+  code: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z M14 2v4a2 2 0 0 0 2 2h4 m10 13-2 2 2 2 m4-4 2 2-2 2',
+  image: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M21 15l-3.09-3.09a2 2 0 0 0-2.82 0L6 21 M9 9m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  archive: 'M3 4h18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8 M10 12h4',
+  link: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+  cornerRight: 'm15 10 5 5-5 5 M4 4v7a4 4 0 0 0 4 4h12',
+  server: 'M4 2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M4 14h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z M6 6h.01 M6 18h.01',
+  star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z',
+  search: 'M11 11m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0 M21 21l-4.3-4.3',
+  plus: 'M5 12h14 M12 5v14', x: 'M18 6 6 18 M6 6l12 12', minus: 'M5 12h14', square: 'M5 5h14v14H5z', check: 'M20 6 9 17l-5-5',
+  terminal: 'm4 17 6-6-6-6 M12 19h8', play: 'M6 3l14 9-14 9z',
+  download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3',
+  upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12',
+  trash: 'M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2',
+  pencil: 'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z',
+  lock: 'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z M7 11V7a5 5 0 0 1 10 0v4',
+  copy: 'M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2',
+  eye: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+  eyeOff: 'M9.88 9.88a3 3 0 1 0 4.24 4.24 M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68 M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61 M2 2l20 20',
+  panelRight: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M15 3v18',
+  panelBottom: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M3 15h18',
+  more: 'M12 12h.01 M19 12h.01 M5 12h.01', zap: 'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+  command: 'M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3',
+  sun: 'M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0 M12 2v2 M12 20v2 M4.93 4.93l1.41 1.41 M17.66 17.66l1.41 1.41 M2 12h2 M20 12h2 M6.34 17.66l-1.41 1.41 M19.07 4.93l-1.41 1.41',
+  moon: 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z', transfers: 'm3 16 4 4 4-4 M7 20V4 m21 8-4-4-4 4 M17 4v16',
+  alert: 'M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0 M12 8v4 M12 16h.01',
+  info: 'M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0 M12 16v-4 M12 8h.01',
+  history: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5 M12 7v5l4 2',
+  bell: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.94 1.94 0 0 0 3.4 0',
+  settings: 'M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+  blank: '',
+};
+function Icon({ name, size = 16, className = '', sw = 1.75, fill = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 3 : sw}
+      strokeLinecap="round" strokeLinejoin="round" className={'shrink-0 ' + className}>
+      <path d={ICONS[name] || ''} fill={fill ? 'currentColor' : 'none'} fillOpacity={fill ? 0.16 : undefined} />
+    </svg>
+  );
+}
+function Logo({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="4 4 56 56" className="shrink-0">
+      <rect x="4" y="4" width="56" height="56" rx="13" fill="var(--accent)" />
+      <g fill="none" stroke="#fff" strokeWidth={size < 30 ? 6.5 : 5.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 35C15 28 20 28 24.5 32S34 36 37 29" /><path d="M52 16L42 48" />
+      </g>
+    </svg>
+  );
+}
+function Spinner({ size = 14 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" className="animate-spin shrink-0"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity=".25" strokeWidth="3" /><path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>;
+}
+
+/* ===================================================================== fake data */
+const NOW = new Date('2026-10-16T10:12:00').getTime();
+const DAY = 864e5;
+const LOCAL_DOWNLOADS = 'C:\\Users\\Akshay\\Downloads';
+const HOSTS = [
+  { alias: 'web-prod', user: 'deploy', hostname: '203.0.113.10', port: 22, home: '/home/deploy' },
+  { alias: 'web-staging', user: 'deploy', hostname: '203.0.113.24', port: 22, home: '/home/deploy' },
+  { alias: 'nas', user: 'akshay', hostname: 'nas.lan', port: 2222, home: '/home/akshay' },
+  { alias: 'pi', user: 'pi', hostname: '192.168.1.40', port: 22, home: '/home/pi' },
+];
+function parseQuick(s) {
+  const m = (s || '').trim().match(/^([^@\s:]+)@([^:\s@]+)(?::(\d+))?$/);
+  if (!m) return null;
+  return { alias: s.trim(), user: m[1], hostname: m[2], port: +(m[3] || 22), home: m[1] === 'root' ? '/root' : '/home/' + m[1], quick: true };
+}
+const hostOf = (alias) => HOSTS.find(h => h.alias === alias) || parseQuick(alias) || { alias, user: '?', hostname: '?', port: 22, home: '/' };
+
+function rng(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 1000003) / 1000003; };
+}
+const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+const extOf = (n) => { const m = n.match(/\.([a-z0-9]+)$/i); return m && m.index > 0 ? m[1].toLowerCase() : ''; };
+
+const TREE = {
+  '/': 'bin@ boot/ dev/ etc/ home/ lib@ opt/ proc/ root/ srv/ tmp/ usr/ var/',
+  '/etc': 'cron.d/ nginx/ ssh/ systemd/ crontab fstab group hostname hosts os-release passwd .pwd.lock',
+  '/etc/nginx': 'conf.d/ sites-available/ sites-enabled/ mime.types nginx.conf',
+  '/etc/nginx/sites-available': 'app.conf default staging.conf',
+  '/etc/nginx/sites-enabled': 'app.conf@f',
+  '/etc/nginx/conf.d': 'gzip.conf security-headers.conf',
+  '/etc/ssh': 'sshd_config.d/ ssh_config sshd_config ssh_host_ed25519_key ssh_host_ed25519_key.pub',
+  '/var': 'backups/ cache/ lib/ log/ www/',
+  '/var/www': 'app/ html/',
+  '/var/www/html': 'index.html',
+  '/var/www/app': 'current@ releases/ shared/ .env deploy.sh README.md',
+  '/var/www/app/releases': '20261014-1132/ 20261015-0918/ 20261016-0842/',
+  '/var/www/app/shared': 'storage/ uploads/ .env.production',
+  '/var/www/app/shared/uploads': 'avatar-1021.png avatar-1022.png hero-banner.jpg invoice-2291.pdf invoice-2292.pdf',
+  '/var/log': 'apt/ archive/ nginx/ auth.log dpkg.log kern.log syslog syslog.1 syslog.2.gz',
+  '/var/log/nginx': 'access.log access.log.1 access.log.2.gz error.log',
+  '/srv': 'backups/ media/',
+  '/srv/media': 'movies/ music/ photos/',
+  '/srv/media/photos': '2024/ 2025/ 2026/ IMG_2041.jpg IMG_2042.jpg IMG_2043.jpg pano-coorg.png wallpaper.png',
+  '/srv/backups': 'laptop-2026-10-01.tar.gz laptop-2026-10-08.tar.gz laptop-2026-10-15.tar.gz',
+};
+const HOME_SPEC = '.cache/ .config/ .ssh/ projects/ scripts/ .bash_history .bashrc .profile backup.tar.gz notes.md';
+const RELEASE_SPEC = 'node_modules/ public/ src/ .env package.json server.js';
+const BIG_DIR = '/var/log/archive';
+const BIG_COUNT = 100000;
+
+function specFor(host, path) {
+  const h = hostOf(host);
+  if (path === BIG_DIR) return null;
+  if (path === h.home) return HOME_SPEC;
+  if (path === h.home + '/.ssh') return 'authorized_keys config known_hosts';
+  if (path === h.home + '/scripts') return 'backup.sh cleanup.py rotate-logs.sh';
+  if (path === '/home') return [...new Set([h.home.split('/')[2] || 'root', 'ubuntu'])].map(u => u + '/').join(' ');
+  if (path === '/var/www/app/current' || /^\/var\/www\/app\/releases\/[^/]+$/.test(path)) return RELEASE_SPEC;
+  return TREE[path];
+}
+function ownerFor(host, path) {
+  const m = path.match(/^\/home\/([^/]+)/);
+  if (m) return m[1];
+  if (path.startsWith('/var/www')) return 'www-data';
+  if (path.startsWith('/srv')) return hostOf(host).user;
+  return 'root';
+}
+const LINK_TARGETS = { current: 'releases/20261016-0842', bin: 'usr/bin', lib: 'usr/lib', 'app.conf': '../sites-available/app.conf' };
+function sizeFor(name, r) {
+  const e = extOf(name);
+  if (name === 'backup.tar.gz') return 1331439862;
+  if (name === 'error.log') return 48211;
+  if (name === 'wallpaper.png') return 24117248;
+  if (/\.tar\.gz$/.test(name)) return Math.floor(4e8 + r() * 1.2e9);
+  if (e === 'gz' || e === 'zip') return Math.floor(3e6 + r() * 6e7);
+  if (e === 'log' || /^syslog/.test(name) || /\.log\.\d$/.test(name)) return Math.floor(2e5 + r() * 4e6);
+  if (['jpg', 'jpeg', 'png', 'webp'].includes(e)) return Math.floor(1.4e6 + r() * 7e6);
+  if (e === 'pdf') return Math.floor(8e4 + r() * 6e5);
+  if (e === 'json' || e === 'js') return Math.floor(1500 + r() * 30000);
+  return Math.floor(180 + r() * 9000);
+}
+function mkEntry(host, dir, tok, r) {
+  let type = 'file', link = null, name = tok;
+  if (tok.endsWith('/')) { type = 'dir'; name = tok.slice(0, -1); }
+  else if (tok.endsWith('@f')) { type = 'link'; link = 'file'; name = tok.slice(0, -2); }
+  else if (tok.endsWith('@')) { type = 'link'; link = 'dir'; name = tok.slice(0, -1); }
+  const size = type === 'dir' ? 4096 : type === 'link' ? 24 : sizeFor(name, r);
+  const mtime = NOW - Math.floor(r() * r() * 160 * DAY) - 60000 * Math.floor(r() * 500);
+  const perms = type === 'dir' ? 'drwxr-xr-x' : type === 'link' ? 'lrwxrwxrwx'
+    : /\.(sh|py)$/.test(name) ? '-rwxr-xr-x'
+    : /(^\.env|_key$|known_hosts|authorized_keys|auth\.log|^\.bash_history)/.test(name) ? '-rw-------' : '-rw-r--r--';
+  return { name, type, link, size, mtime, perms, owner: ownerFor(host, dir), target: link ? (LINK_TARGETS[name] || '/opt/' + name) : null };
+}
+const GEN_DIRS = ['assets', 'config', 'data', 'lib', 'old', 'tmp', 'cache', 'build'];
+const GEN_FILES = ['index.html', 'app.js', 'styles.css', 'data.json', 'notes.txt', 'run.sh', 'image.png', 'report.pdf', 'archive.zip', 'README.md', 'settings.conf', 'output.log'];
+const dirCache = new Map();
+function listDir(host, path) {
+  const key = host + '|' + path;
+  if (dirCache.has(key)) return dirCache.get(key);
+  let out;
+  if (path === BIG_DIR) {
+    out = new Array(BIG_COUNT);
+    for (let i = 0; i < BIG_COUNT; i++) {
+      const n = String(i + 1).padStart(6, '0');
+      out[i] = { name: `syslog-${n}.gz`, type: 'file', link: null, size: 1000 + (i * 7919) % 900000, mtime: NOW - i * 60000 * 7, perms: '-rw-r-----', owner: 'root', target: null };
+    }
+  } else {
+    const r = rng(key);
+    let spec = specFor(host, path);
+    if (spec == null) {
+      const toks = [];
+      const nd = Math.floor(r() * 4), nf = 3 + Math.floor(r() * 9);
+      for (let i = 0; i < nd; i++) toks.push(GEN_DIRS[Math.floor(r() * GEN_DIRS.length)] + '/');
+      for (let i = 0; i < nf; i++) toks.push(GEN_FILES[Math.floor(r() * GEN_FILES.length)]);
+      spec = [...new Set(toks)].join(' ');
+    }
+    out = spec.split(/\s+/).filter(Boolean).map(t => mkEntry(host, path, t, r));
+  }
+  dirCache.set(key, out);
+  return out;
+}
+const isDirish = (e) => e.type === 'dir' || e.link === 'dir';
+
+/* fake file contents for preview */
+const NGINX_CONF = `user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}`;
+const SITE_CONF = `server {
+    listen 443 ssl http2;
+    server_name app.example.com;
+
+    root /var/www/app/current/public;
+    index index.html;
+
+    ssl_certificate /etc/letsencrypt/live/app.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.example.com/privkey.pem;
+
+    location / {
+        try_files $uri $uri/ @app;
+    }
+
+    location @app {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+# Redirect plain HTTP
+server {
+    listen 80;
+    server_name app.example.com;
+    return 301 https://$host$request_uri;
+}`;
+const DEPLOY_SH = `#!/usr/bin/env bash
+# Deploy a new release and switch the current symlink
+set -euo pipefail
+
+APP=/var/www/app
+STAMP=$(date +%Y%m%d-%H%M)
+RELEASE="$APP/releases/$STAMP"
+
+echo "Deploying $STAMP"
+git clone --depth 1 git@github.com:example/app.git "$RELEASE"
+cd "$RELEASE"
+npm ci --omit=dev
+ln -sfn "$APP/shared/.env" .env
+ln -sfn "$RELEASE" "$APP/current"
+sudo systemctl reload app
+
+# Keep the five newest releases
+ls -1dt $APP/releases/* | tail -n +6 | xargs rm -rf
+echo "Done"`;
+const ENV_TXT = `NODE_ENV=production
+PORT=3000
+DATABASE_URL="postgres://app:hunter2@localhost:5432/app"
+REDIS_URL="redis://127.0.0.1:6379"
+LOG_LEVEL=info
+SESSION_SECRET="8f2c0d6e1b7a4c39"`;
+const README_MD = `# app
+
+Production deploy of the example app.
+
+## Layout
+
+- releases/ one folder per deploy
+- current -> the live release
+- shared/ uploads and .env, linked into each release
+
+## Deploy
+
+Run ./deploy.sh as the deploy user.`;
+const NOTES_MD = `# Server notes
+
+- Backups run nightly at 02:00 (scripts/backup.sh)
+- Rotate logs weekly
+- TODO: move uploads to the NAS
+- Disk at 71% on 14 Oct`;
+const PKG_JSON = `{
+  "name": "app",
+  "version": "4.12.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "pg": "^8.13.0"
+  }
+}`;
+const SERVER_JS = `// Entry point
+import express from 'express';
+import { pool } from './src/db.js';
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/api/health', async (req, res) => {
+  const { rows } = await pool.query('select 1 as ok');
+  res.json({ ok: rows[0].ok === 1 });
+});
+
+app.listen(port, () => console.log('listening on ' + port));`;
+const BASHRC = `# ~/.bashrc
+export EDITOR=vim
+export PATH="$HOME/.local/bin:$PATH"
+
+alias ll='ls -la'
+alias logs='cd /var/log && ls -lt | head'
+
+# Prompt
+PS1='\\u@\\h:\\w\\$ '`;
+const CLEANUP_PY = `#!/usr/bin/env python3
+# Delete uploads older than 90 days
+import os, time
+
+ROOT = "/var/www/app/shared/uploads"
+LIMIT = 90 * 24 * 3600
+
+for name in os.listdir(ROOT):
+    path = os.path.join(ROOT, name)
+    if time.time() - os.path.getmtime(path) > LIMIT:
+        os.remove(path)
+        print("removed", name)`;
+const ETC = {
+  hosts: '127.0.0.1 localhost\n127.0.1.1 web-prod\n\n# The following lines are desirable for IPv6 capable hosts\n::1 ip6-localhost ip6-loopback',
+  hostname: 'web-prod',
+  fstab: '# <file system> <mount point> <type> <options> <dump> <pass>\nUUID=3f1e9c2a / ext4 errors=remount-ro 0 1\nUUID=8B2C-11F0 /boot/efi vfat umask=0077 0 1\n/swapfile none swap sw 0 0',
+  'os-release': 'PRETTY_NAME="Ubuntu 24.04.3 LTS"\nNAME="Ubuntu"\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\nID=ubuntu',
+  crontab: '# m h dom mon dow user command\n17 * * * * root cd / && run-parts --report /etc/cron.hourly\n0 2 * * * deploy /home/deploy/scripts/backup.sh',
+  passwd: 'root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\ndeploy:x:1000:1000:Deploy,,,:/home/deploy:/bin/bash',
+  group: 'root:x:0:\nsudo:x:27:deploy\nwww-data:x:33:deploy\ndeploy:x:1000:',
+  sshd_config: '# See sshd_config(5)\nInclude /etc/ssh/sshd_config.d/*.conf\n\nPort 22\nPermitRootLogin no\nPasswordAuthentication no\nPubkeyAuthentication yes\nX11Forwarding no\nSubsystem sftp /usr/lib/openssh/sftp-server',
+  ssh_config: 'Host *\n    SendEnv LANG LC_*\n    HashKnownHosts yes',
+  config: 'Host github.com\n    User git\n    IdentityFile ~/.ssh/id_ed25519',
+  authorized_keys: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1x0d1c2b3a4f5e6d7c8b9a0f1e2d3c4b5a6 akshay@desktop',
+  known_hosts: '|1|q3k9Xz0T2bQ=|n2Jd8F0y5a1= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ2c...\n|1|Z8yR4mN1pQ=|K7tE2wB6c9= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM9d...',
+  'ssh_host_ed25519_key.pub': 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF4a8c2e9b1d7f3a5c6e8b0d2f4a6c8e0b2d4 root@web-prod',
+};
+function logText(name) {
+  const r = rng(name);
+  const pick = (a) => a[Math.floor(r() * a.length)];
+  const pad = (n) => String(n).padStart(2, '0');
+  const lines = [];
+  for (let i = 0; i < 80; i++) {
+    const t = new Date(NOW - (80 - i) * 41000);
+    const hms = `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+    if (name.startsWith('error')) lines.push(`2026/10/16 ${hms} [${r() < .3 ? 'error' : 'warn'}] 1102#1102: *${4000 + i} upstream timed out while reading response header from upstream, client: 198.51.100.${Math.floor(r() * 250)}`);
+    else if (name.startsWith('access')) lines.push(`${pick(['203.0.113.7', '198.51.100.23', '192.0.2.44', '203.0.113.91'])} - - [16/Oct/2026:${hms} +0530] "GET ${pick(['/', '/api/health', '/api/orders', '/login', '/assets/app.4f1c.js', '/favicon.ico'])} HTTP/2.0" ${r() < .88 ? 200 : r() < .5 ? 404 : 502} ${Math.floor(r() * 40000)}`);
+    else if (name.startsWith('auth')) lines.push(`Oct 16 ${hms} web-prod sshd[${2000 + i}]: ${pick(['Accepted publickey for deploy from 203.0.113.7 port 51234 ssh2: ED25519', 'Invalid user admin from 45.83.12.9 port 40112', 'Connection closed by authenticating user root 45.83.12.9 port 40220 [preauth]', 'pam_unix(sshd:session): session opened for user deploy'])}`);
+    else lines.push(`Oct 16 ${hms} web-prod ${pick(['systemd[1]: Started Daily apt download activities.', 'kernel: [UFW BLOCK] IN=eth0 SRC=45.83.12.9 DST=203.0.113.10 PROTO=TCP DPT=23', 'CRON[2211]: (deploy) CMD (/home/deploy/scripts/backup.sh)', 'node[812]: GET /api/health 200 3ms', 'systemd[1]: Reloading app.service...'])}`);
+  }
+  return lines.join('\n');
+}
+function fileText(name) {
+  const e = extOf(name);
+  if (name === 'nginx.conf') return NGINX_CONF;
+  if (/\.conf$/.test(name) || name === 'default') return SITE_CONF;
+  if (name.startsWith('.env')) return ENV_TXT;
+  if (name === 'deploy.sh' || e === 'sh') return DEPLOY_SH;
+  if (name === '.bashrc' || name === '.profile') return BASHRC;
+  if (e === 'py') return CLEANUP_PY;
+  if (name === 'README.md') return README_MD;
+  if (e === 'md') return NOTES_MD;
+  if (e === 'json') return PKG_JSON;
+  if (e === 'js') return SERVER_JS;
+  if (e === 'log' || /^syslog/.test(name) || /\.log\.\d$/.test(name)) return logText(name);
+  if (ETC[name]) return ETC[name];
+  return `${name}\n\n(plain text placeholder content)`;
+}
+const TEXT_NAMES = new Set(['default', 'hosts', 'hostname', 'fstab', 'os-release', 'crontab', 'passwd', 'group', 'sshd_config', 'ssh_config', 'config', 'authorized_keys', 'known_hosts', '.bashrc', '.profile', '.bash_history', 'mime.types']);
+const TEXT_EXTS = new Set(['conf', 'sh', 'py', 'md', 'json', 'js', 'ts', 'log', 'txt', 'css', 'html', 'yml', 'yaml', 'toml', 'pub', 'ini', 'env', 'production', 'types', 'lock']);
+const IMG_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+function previewKind(name) {
+  const e = extOf(name);
+  if (IMG_EXTS.has(e)) return 'image';
+  if (TEXT_EXTS.has(e) || TEXT_NAMES.has(name) || name.startsWith('.env') || /\.log\.\d$/.test(name) || /^syslog(\.\d)?$/.test(name)) return 'text';
+  return null;
+}
+function langOf(name) {
+  const e = extOf(name);
+  if (e === 'js' || e === 'json' || e === 'ts') return 'js';
+  if (e === 'md') return 'md';
+  if (e === 'log' || /^syslog/.test(name) || /\.log\.\d$/.test(name)) return 'log';
+  return 'conf';
+}
+function fileIconName(name) {
+  const e = extOf(name);
+  if (IMG_EXTS.has(e)) return 'image';
+  if (['gz', 'zip', 'tar', 'tgz', 'xz', '7z'].includes(e)) return 'archive';
+  if (['sh', 'py', 'js', 'ts', 'json', 'css', 'html'].includes(e)) return 'code';
+  if (previewKind(name) === 'text') return 'fileText';
+  return 'file';
+}
+const TEXT_LIMIT = 1024 * 1024, IMG_LIMIT = 20 * 1024 * 1024;
+
+/* fake server-side recursive search, as `find` would do it */
+function fakeFind(host, root, pattern) {
+  const glob = /[*?]/.test(pattern);
+  const re = glob ? new RegExp('^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i') : null;
+  const p = pattern.toLowerCase();
+  const out = [];
+  const walk = (dir, depth) => {
+    if (depth > 5 || out.length >= 300 || dir === BIG_DIR || /\/(proc|dev|node_modules)$/.test(dir)) return;
+    for (const e of listDir(host, dir)) {
+      const full = joinPath(dir, e.name);
+      if (re ? re.test(e.name) : e.name.toLowerCase().includes(p)) out.push({ path: full, dir, e });
+      if (e.type === 'dir') walk(full, depth + 1);
+    }
+  };
+  walk(root, 0);
+  return out;
+}
+
+/* fake remote command execution */
+function fakeRun(cmd, h, cwd) {
+  const parts = cmd.trim().split(/\s+/);
+  const prog = parts[0], args = parts.slice(1);
+  const ents = listDir(h.alias, cwd);
+  const pad = (s, n) => String(s).padStart(n);
+  switch (prog) {
+    case 'pwd': return { out: cwd, code: 0 };
+    case 'whoami': return { out: h.user, code: 0 };
+    case 'hostname': return { out: h.alias, code: 0 };
+    case 'uptime': return { out: ' 10:12:44 up 41 days,  3:07,  1 user,  load average: 0.08, 0.11, 0.09', code: 0 };
+    case 'ls': {
+      const long = args.some(a => a.startsWith('-') && a.includes('l'));
+      const list = args.some(a => a.startsWith('-') && a.includes('a')) ? ents : ents.filter(e => !e.name.startsWith('.'));
+      const shown = list.slice(0, 40);
+      const more = list.length > 40 ? `\n… ${(list.length - 40).toLocaleString()} more` : '';
+      if (!long) return { out: shown.map(e => e.name).join('  ') + more, code: 0 };
+      return { out: `total ${list.length * 4}\n` + shown.map(e => `${e.perms} 1 ${e.owner.padEnd(8)} ${e.owner.padEnd(8)} ${pad(e.size, 10)} Oct 16 09:42 ${e.name}${e.target ? ' -> ' + e.target : ''}`).join('\n') + more, code: 0 };
+    }
+    case 'df': return { out: 'Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1        78G   55G   23G  71% /\ntmpfs           3.9G     0  3.9G   0% /dev/shm\n/dev/sda15      105M  6.1M   99M   6% /boot/efi', code: 0 };
+    case 'free': return { out: '               total        used        free      shared  buff/cache   available\nMem:           7.8Gi       2.1Gi       1.2Gi        42Mi       4.5Gi       5.4Gi\nSwap:          2.0Gi          0B       2.0Gi', code: 0 };
+    case 'du': return { out: ents.slice(0, 20).map(e => fmtSize(e.size).replace(' ', '').padEnd(9) + e.name).join('\n'), code: 0 };
+    case 'tail': case 'cat': case 'head': {
+      const f = args.filter(a => !a.startsWith('-') && !/^\d+$/.test(a)).pop();
+      if (!f) return { out: `${prog}: missing file operand`, code: 1 };
+      const txt = fileText(f.split('/').pop()).split('\n');
+      const n = prog === 'cat' ? txt.length : 10;
+      return { out: (prog === 'head' ? txt.slice(0, n) : txt.slice(-n)).join('\n'), code: 0 };
+    }
+    case 'systemctl': return { out: '● app.service - Example app\n     Loaded: loaded (/etc/systemd/system/app.service; enabled)\n     Active: active (running) since Tue 2026-10-14 11:32:08 IST; 1 day 22h ago\n   Main PID: 812 (node)\n     Memory: 148.2M', code: 0 };
+    case 'echo': return { out: args.join(' '), code: 0 };
+    case 'sudo': return { out: 'sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper', code: 1 };
+    default: return { out: `bash: ${prog}: command not found`, code: 127 };
+  }
+}
+
+/* ===================================================================== helpers */
+const joinPath = (a, b) => (a === '/' ? '/' + b : a + '/' + b);
+const parentPath = (p) => (p === '/' ? '/' : p.slice(0, p.lastIndexOf('/')) || '/');
+const segs = (p) => p.split('/').filter(Boolean);
+const baseName = (p) => (p === '/' ? '/' : p.slice(p.lastIndexOf('/') + 1));
+function resolvePath(s, cur, home) {
+  s = s.trim();
+  if (!s) return null;
+  if (s === '~') s = home; else if (s.startsWith('~/')) s = home + s.slice(1); else if (!s.startsWith('/')) s = joinPath(cur, s);
+  const out = [];
+  for (const p of s.split('/')) { if (!p || p === '.') continue; if (p === '..') out.pop(); else out.push(p); }
+  return '/' + out.join('/');
+}
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+const fmtSpeed = (b) => fmtSize(Math.round(b)) + '/s';
+function fmtEta(s) {
+  if (!isFinite(s) || s <= 0) return '—';
+  if (s < 60) return Math.ceil(s) + ' s';
+  if (s < 3600) return Math.floor(s / 60) + ' min ' + Math.round(s % 60) + ' s';
+  return Math.floor(s / 3600) + ' h ' + Math.round((s % 3600) / 60) + ' min';
+}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const p2 = (n) => String(n).padStart(2, '0');
+function fmtDate(t) {
+  const d = new Date(t), today = new Date(NOW), hm = p2(d.getHours()) + ':' + p2(d.getMinutes());
+  if (d.toDateString() === today.toDateString()) return 'Today ' + hm;
+  if (d.toDateString() === new Date(NOW - DAY).toDateString()) return 'Yesterday ' + hm;
+  if (d.getFullYear() === today.getFullYear()) return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + hm;
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+const fmtDateLong = (t) => { const d = new Date(t); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; };
+function octal(perms) {
+  const p = perms.slice(1); let s = '';
+  for (let i = 0; i < 9; i += 3) s += (p[i] === 'r' ? 4 : 0) + (p[i + 1] === 'w' ? 2 : 0) + (p[i + 2] === 'x' ? 1 : 0);
+  return s;
+}
+const bmLabel = (p, list) => (list.filter(x => baseName(x) === baseName(p)).length > 1 ? segs(p).slice(-2).join('/') : baseName(p));
+const kindLabel = (e) => e.type === 'dir' ? 'Folder' : e.link === 'dir' ? 'Symlink to folder' : e.link === 'file' ? 'Symlink to file' : (extOf(e.name) ? extOf(e.name).toUpperCase() + ' file' : 'File');
+const sumSize = (ents) => ents.reduce((s, e) => s + (e.type === 'file' ? e.size : 0), 0);
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+function viewEntries(all, sort, filter, hidden) {
+  let list = all;
+  if (!hidden) list = list.filter(e => !e.name.startsWith('.'));
+  if (filter) { const f = filter.toLowerCase(); list = list.filter(e => e.name.toLowerCase().includes(f)); }
+  const k = sort.key, d = sort.dir;
+  const cmp = k === 'name' ? (a, b) => collator.compare(a.name, b.name)
+    : k === 'size' ? (a, b) => (a.size - b.size) || collator.compare(a.name, b.name)
+    : k === 'mtime' ? (a, b) => a.mtime - b.mtime
+    : k === 'perms' ? (a, b) => (a.perms < b.perms ? -1 : a.perms > b.perms ? 1 : 0)
+    : (a, b) => collator.compare(a.owner, b.owner);
+  return list.slice().sort((a, b) => (isDirish(b) - isDirish(a)) || d * cmp(a, b));
+}
+function transferSummary(ts) {
+  const act = ts.filter(t => t.status === 'active'), q = ts.filter(t => t.status === 'queued'), pend = act.concat(q);
+  const total = pend.reduce((s, t) => s + t.size, 0), done = pend.reduce((s, t) => s + t.done, 0), speed = act.reduce((s, t) => s + t.speed, 0);
+  return {
+    active: act.length, queued: q.length, running: pend.length > 0, speed,
+    failed: ts.filter(t => t.status === 'failed').length, finished: ts.filter(t => t.status === 'done').length,
+    pct: total ? (done / total) * 100 : 100, eta: speed ? (total - done) / speed : 0,
+  };
+}
+function useEvent(name, fn) {
+  const ref = useRef(fn); ref.current = fn;
+  useEffect(() => { const h = (e) => ref.current(e); window.addEventListener(name, h); return () => window.removeEventListener(name, h); }, [name]);
+}
+function useOutside(ref, open, close) {
+  useEffect(() => {
+    if (!open) return;
+    const f = (e) => { if (ref.current && !ref.current.contains(e.target)) close(); };
+    const t = setTimeout(() => window.addEventListener('mousedown', f), 0);
+    return () => { clearTimeout(t); window.removeEventListener('mousedown', f); };
+  }, [open]);
+}
+
+/* ===================================================================== app state (shared by every variant) */
+let tabSeq = 1, trSeq = 1, toastSeq = 1, logSeq = 1, cmdSeq = 1;
+const mkTab = (host, path) => ({ id: 't' + tabSeq++, host, path, back: [], fwd: [], sel: [], anchor: null, cursor: null, sort: { key: 'name', dir: 1 }, filter: '', search: null });
+const mkTransfer = (o) => ({ id: trSeq++, done: 0, speed: 0, status: 'queued', ...o });
+const clock = () => { const d = new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; };
+
+function useApp() {
+  const [init] = useState(() => [mkTab('web-prod', '/var/www/app'), mkTab('nas', '/srv/media/photos'), mkTab('web-prod', '/etc/nginx')]);
+  const [tabs, setTabs] = useState(init);
+  const [activeId, setActiveId] = useState(init[0].id);
+  const [conn, setConn] = useState({ 'web-prod': 'connected', nas: 'connected', 'web-staging': 'idle', pi: 'idle' });
+  const [hidden, setHidden] = useState(false);
+  const [bookmarks, setBookmarks] = useState({
+    'web-prod': ['/var/www/app', '/etc/nginx', '/var/log/nginx', BIG_DIR],
+    'web-staging': ['/var/www/app'], nas: ['/srv/media/photos', '/srv/backups'], pi: ['/home/pi/scripts'],
+  });
+  const [recent, setRecent] = useState([]);
+  const [transfers, setTransfers] = useState(() => [
+    mkTransfer({ dir: 'down', name: 'backup.tar.gz', host: 'web-prod', from: '/home/deploy', size: 1331439862, done: 506e6, status: 'active', speed: 1.8e7 }),
+    mkTransfer({ dir: 'up', name: 'hero-banner.webp', host: 'web-prod', from: 'C:\\Users\\Akshay\\Pictures', to: '/var/www/app/shared/uploads', size: 2.3e6 }),
+    mkTransfer({ dir: 'down', name: 'IMG_2041.jpg', host: 'nas', from: '/srv/media/photos', size: 4.1e6, done: 4.1e6, status: 'done' }),
+    mkTransfer({ dir: 'down', name: 'auth.log', host: 'web-prod', from: '/var/log', size: 312e3, status: 'failed', error: 'Permission denied (owned by root, mode 600)' }),
+  ]);
+  const [toasts, setToasts] = useState([]);
+  const [log, setLog] = useState(() => [
+    { id: logSeq++, t: '10:11:52', host: 'web-prod', msg: 'Connecting to 203.0.113.10:22' },
+    { id: logSeq++, t: '10:11:52', host: 'web-prod', msg: 'Server version SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.5' },
+    { id: logSeq++, t: '10:11:52', host: 'web-prod', msg: 'Host key ssh-ed25519 SHA256:q3k9Xz0T2b… matches ~/.ssh/known_hosts' },
+    { id: logSeq++, t: '10:11:53', host: 'web-prod', msg: 'Authenticated as deploy with publickey (~/.ssh/id_ed25519)' },
+    { id: logSeq++, t: '10:11:53', host: 'web-prod', msg: 'SFTP subsystem opened (protocol 3)' },
+    { id: logSeq++, t: '10:11:55', host: 'nas', msg: 'Connected to nas.lan:2222, authenticated as akshay with publickey' },
+  ]);
+  const [cmdLog, setCmdLog] = useState([]);
+  const [menu, setMenu] = useState(null);
+  const [ui, setUiState] = useState({ run: false });
+  const [tick, setTick] = useState(0);
+  const timers = useRef({});
+
+  const active = tabs.find(t => t.id === activeId) || tabs[0];
+  const toast = (text, o = {}) => {
+    const id = toastSeq++;
+    setToasts(t => [...t.slice(-3), { id, text, ...o }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), o.ms || 4200);
+  };
+  const addLog = (host, msg, level) => setLog(l => [...l.slice(-300), { id: logSeq++, t: clock(), host, msg, level }]);
+  const updateTab = (id, fn) => setTabs(ts => ts.map(t => (t.id === id ? { ...t, ...fn(t) } : t)));
+  const setUi = (p) => setUiState(u => ({ ...u, ...p }));
+
+  const navigate = (path, tabId = active.id, select = null) => updateTab(tabId, t => (t.path === path && !select ? { search: null } : {
+    path, back: t.path === path ? t.back : [...t.back, t.path], fwd: t.path === path ? t.fwd : [],
+    sel: select ? [select] : [], cursor: select, anchor: select, filter: '', search: null,
+  }));
+  const goBack = () => updateTab(active.id, t => (t.back.length ? { path: t.back[t.back.length - 1], back: t.back.slice(0, -1), fwd: [t.path, ...t.fwd], sel: [], cursor: null, filter: '', search: null } : {}));
+  const goForward = () => updateTab(active.id, t => (t.fwd.length ? { path: t.fwd[0], fwd: t.fwd.slice(1), back: [...t.back, t.path], sel: [], cursor: null, filter: '', search: null } : {}));
+  const goUp = () => { if (active.host && active.path !== '/') navigate(parentPath(active.path), active.id, baseName(active.path)); };
+
+  const connect = (alias) => {
+    const h = hostOf(alias);
+    setConn(c => ({ ...c, [alias]: 'connecting' }));
+    addLog(alias, `Connecting to ${h.hostname}:${h.port}`);
+    clearTimeout(timers.current[alias]);
+    timers.current[alias] = setTimeout(() => {
+      setConn(c => (c[alias] === 'connecting' ? { ...c, [alias]: 'connected' } : c));
+      addLog(alias, `Authenticated as ${h.user} with publickey (~/.ssh/id_ed25519); SFTP subsystem opened`);
+    }, alias === 'pi' ? 2800 : 900);
+  };
+  const cancelConnect = (alias) => { clearTimeout(timers.current[alias]); setConn(c => ({ ...c, [alias]: 'idle' })); addLog(alias, 'Connection cancelled by user', 'warn'); };
+  const disconnect = (alias) => { setConn(c => ({ ...c, [alias]: 'idle' })); addLog(alias, 'Disconnected'); };
+
+  const openHost = (alias, { newTab = false, path = null } = {}) => {
+    if ((conn[alias] || 'idle') === 'idle') connect(alias);
+    const target = path || hostOf(alias).home;
+    if (!newTab) {
+      if (active.host === alias) { if (path) navigate(target); return; }
+      if (active.host == null) { updateTab(active.id, () => ({ host: alias, path: target, back: [], fwd: [], sel: [] })); return; }
+      const ex = tabs.find(t => t.host === alias);
+      if (ex) { setActiveId(ex.id); if (path) navigate(target, ex.id); return; }
+    }
+    const t = mkTab(alias, target);
+    setTabs(ts => [...ts, t]); setActiveId(t.id);
+  };
+  const quickConnect = (s) => {
+    const h = parseQuick(s);
+    if (!h) { toast('Quick Connect needs user@host or user@host:port', { kind: 'bad' }); return false; }
+    openHost(h.alias, { newTab: active.host != null });
+    return true;
+  };
+  const newTab = ({ launcher = false } = {}) => {
+    const t = launcher || !active.host ? mkTab(null, '/') : mkTab(active.host, active.path);
+    setTabs(ts => [...ts, t]); setActiveId(t.id);
+  };
+  const closeTab = (id) => {
+    const i = tabs.findIndex(t => t.id === id);
+    let rest = tabs.filter(t => t.id !== id);
+    if (!rest.length) rest = [mkTab(null, '/')];
+    setTabs(rest);
+    if (id === activeId) setActiveId(rest[Math.max(0, i - 1)].id);
+  };
+
+  const openEntry = (tab, e) => {
+    if (isDirish(e)) navigate(joinPath(tab.path, e.name), tab.id);
+    else toast(`Opening ${e.name} in VS Code`, { icon: 'pencil', mono: `code.cmd "%TEMP%\\sftp\\${tab.host}${joinPath(tab.path, e.name).replace(/\//g, '\\')}"`, sub: 'Saving in the editor uploads it back automatically.' });
+  };
+  const download = (tab, ents) => {
+    if (!ents.length) return;
+    const ts = ents.map(e => mkTransfer({
+      dir: 'down', name: e.name, host: tab.host, from: tab.path, kind: isDirish(e) ? 'folder' : 'file',
+      size: isDirish(e) ? Math.floor(2e7 + (hash(e.name) % 4e8)) : e.size,
+      failAt: hash(e.name) % 7 === 3 ? 0.4 + (hash(e.name) % 40) / 100 : null,
+    }));
+    setTransfers(t => [...t, ...ts]);
+    toast(`Downloading ${ents.length === 1 ? ents[0].name : ents.length + ' items'} to Downloads`, { icon: 'download', sub: LOCAL_DOWNLOADS });
+  };
+  const upload = (tab, files, to = tab.path) => {
+    if (!files.length) return;
+    setTransfers(t => [...t, ...files.map(f => mkTransfer({ dir: 'up', name: f.name, host: tab.host, from: 'C:\\Users\\Akshay\\…', to, size: Math.max(f.size, 1200) }))]);
+    toast(`Uploading ${files.length === 1 ? files[0].name : files.length + ' files'} to ${tab.host}:${to}`, { icon: 'upload' });
+  };
+  const pickUpload = (tab) => {
+    const i = document.createElement('input');
+    i.type = 'file'; i.multiple = true;
+    i.onchange = () => upload(tab, [...i.files].map(f => ({ name: f.name, size: f.size })));
+    i.click();
+  };
+  const cancelTransfer = (id) => setTransfers(ts => ts.map(t => (t.id === id ? { ...t, status: 'cancelled', speed: 0 } : t)));
+  const retryTransfer = (id) => setTransfers(ts => ts.map(t => (t.id === id ? { ...t, status: 'queued', failAt: null, error: null, done: t.error && t.error.startsWith('Connection') ? t.done : 0 } : t)));
+  const clearFinished = () => setTransfers(ts => ts.filter(t => t.status === 'active' || t.status === 'queued' || t.status === 'failed'));
+
+  const openTerminal = (tab, path = tab.path) => {
+    const h = hostOf(tab.host);
+    const ssh = h.quick ? `ssh -t -p ${h.port} ${h.user}@${h.hostname}` : `ssh -t ${h.alias}`;
+    toast('Opening Windows Terminal', { icon: 'terminal', mono: `wt -w 0 new-tab -- ${ssh} "cd '${path}' && exec $SHELL -l"`, sub: 'Windows ssh asks for the key passphrase itself (ssh-agent is off).', ms: 7000 });
+  };
+  const runCommand = (tab, cmd) => {
+    const h = hostOf(tab.host);
+    const { out, code } = fakeRun(cmd, h, tab.path);
+    setCmdLog(l => [...l, { id: cmdSeq++, host: tab.host, cwd: tab.path, user: h.user, cmd, out, code, t: clock() }]);
+    addLog(tab.host, `exec "${cmd}" in ${tab.path} → exit ${code}`);
+  };
+  const copy = (text) => {
+    try { navigator.clipboard.writeText(text); } catch (e) {}
+    const n = text.split('\n').length;
+    toast(n > 1 ? `Copied ${n} paths` : 'Copied path', { icon: 'copy', mono: n > 1 ? null : text });
+  };
+  const toggleBookmark = (host, path) => setBookmarks(b => {
+    const cur = b[host] || [];
+    return { ...b, [host]: cur.includes(path) ? cur.filter(p => p !== path) : [...cur, path] };
+  });
+  const isBookmarked = (host, path) => (bookmarks[host] || []).includes(path);
+  const act = (kind, ents = []) => {
+    const n = ents.length, what = n === 1 ? `“${ents[0].name}”` : `${n} items`;
+    const msg = {
+      rename: [`Rename ${what}`, 'Inline edit in the Name column (not built in this prototype).'],
+      perms: [`Permissions for ${what}`, 'Dialog with read/write/execute checkboxes, octal, and “apply to contents”. Not built here.'],
+      delete: [`Delete ${what} from ${active.host}?`, 'A confirmation dialog would ask this. There is no remote trash, so it can’t be undone.'],
+      newfolder: ['New folder', 'Adds “New folder” and starts renaming it.'],
+      newfile: ['New file', 'Adds “untitled.txt” and starts renaming it.'],
+    }[kind];
+    toast(msg[0], { icon: kind === 'delete' ? 'trash' : kind === 'perms' ? 'lock' : 'pencil', sub: msg[1] });
+  };
+  const refresh = () => { setTick(x => x + 1); addLog(active.host, `LIST ${active.path} (refresh)`); toast('Refreshed', { icon: 'refresh', ms: 1500 }); };
+  const setSort = (tab, key) => updateTab(tab.id, t => ({ sort: t.sort.key === key ? { key, dir: -t.sort.dir } : { key, dir: key === 'mtime' || key === 'size' ? -1 : 1 } }));
+  const startSearch = (tab, pattern) => {
+    if (!pattern.trim()) return;
+    updateTab(tab.id, () => ({ search: { pattern: pattern.trim(), root: tab.path, running: true, results: [] } }));
+    addLog(tab.host, `exec find '${tab.path}' -iname '${pattern.trim()}'`);
+    setTimeout(() => updateTab(tab.id, t => (t.search && t.search.pattern === pattern.trim() ? { search: { ...t.search, running: false, results: fakeFind(t.host, t.search.root, t.search.pattern), ms: 300 + hash(pattern) % 900 } } : {})), 650);
+  };
+  const clearSearch = (tab) => updateTab(tab.id, () => ({ search: null }));
+
+  const openMenu = (pos, items) => setMenu({ x: pos.x, y: pos.y, items: items.filter(Boolean) });
+  const openMenuAt = (el, items) => { const r = el.getBoundingClientRect(); openMenu({ x: r.left, y: r.bottom + 4 }, items); };
+  const entryMenu = (tab, ents) => {
+    const one = ents.length === 1 ? ents[0] : null, full = (e) => joinPath(tab.path, e.name);
+    return [
+      one && isDirish(one) && { label: 'Open', icon: 'folder', kbd: 'Enter', onClick: () => openEntry(tab, one) },
+      one && isDirish(one) && { label: 'Open in new Tab', icon: 'plus', onClick: () => openHost(tab.host, { newTab: true, path: full(one) }) },
+      one && !isDirish(one) && { label: 'Open in editor', icon: 'pencil', kbd: 'Enter', onClick: () => openEntry(tab, one) },
+      { label: ents.length > 1 ? `Download ${ents.length} items` : 'Download', icon: 'download', onClick: () => download(tab, ents) },
+      { label: 'Download to…', icon: 'download', onClick: () => toast('Would open the Windows folder picker', { icon: 'download' }) },
+      { sep: true },
+      { label: ents.length > 1 ? 'Copy paths' : 'Copy path', icon: 'copy', kbd: 'Ctrl+Shift+C', onClick: () => copy(ents.map(full).join('\n')) },
+      one && { label: 'Rename', icon: 'pencil', kbd: 'F2', onClick: () => act('rename', ents) },
+      { label: 'Permissions…', icon: 'lock', onClick: () => act('perms', ents) },
+      { label: 'Delete', icon: 'trash', kbd: 'Del', danger: true, onClick: () => act('delete', ents) },
+      one && isDirish(one) && { sep: true },
+      one && isDirish(one) && { label: 'Open terminal here', icon: 'terminal', onClick: () => openTerminal(tab, full(one)) },
+      one && isDirish(one) && { label: isBookmarked(tab.host, full(one)) ? 'Remove bookmark' : 'Bookmark', icon: 'star', onClick: () => toggleBookmark(tab.host, full(one)) },
+    ];
+  };
+  const folderMenu = (tab) => [
+    { label: 'New folder', icon: 'folder', kbd: 'Ctrl+Shift+N', onClick: () => act('newfolder') },
+    { label: 'New file', icon: 'file', onClick: () => act('newfile') },
+    { label: 'Upload files…', icon: 'upload', onClick: () => pickUpload(tab) },
+    { sep: true },
+    { label: 'Open terminal here', icon: 'terminal', onClick: () => openTerminal(tab) },
+    { label: 'Run command…', icon: 'play', onClick: () => setUi({ run: true }) },
+    { sep: true },
+    { label: 'Copy folder path', icon: 'copy', onClick: () => copy(tab.path) },
+    { label: isBookmarked(tab.host, tab.path) ? 'Remove bookmark' : 'Bookmark this folder', icon: 'star', onClick: () => toggleBookmark(tab.host, tab.path) },
+    { label: 'Show hidden files', icon: 'eye', check: hidden, onClick: () => setHidden(h => !h) },
+    { label: 'Refresh', icon: 'refresh', kbd: 'F5', onClick: refresh },
+  ];
+
+  // transfer engine: up to 3 at once, random speeds, some fail midway (and resume on retry)
+  useEffect(() => {
+    const id = setInterval(() => setTransfers(ts => {
+      if (!ts.some(t => t.status === 'active' || t.status === 'queued')) return ts;
+      let running = ts.filter(t => t.status === 'active').length;
+      return ts.map(t => {
+        if (t.status === 'queued' && running < 3) { running++; return { ...t, status: 'active', speed: 4e6 + Math.random() * 2e7 }; }
+        if (t.status !== 'active') return t;
+        const speed = Math.min(4e7, Math.max(1.5e6, t.speed * (0.88 + Math.random() * 0.26)));
+        const done = Math.min(t.size, t.done + speed * 0.3);
+        if (t.failAt && done >= t.size * t.failAt) return { ...t, done, speed: 0, status: 'failed', error: `Connection reset at ${Math.round(t.failAt * 100)}%. Retry resumes from there.` };
+        if (done >= t.size) return { ...t, done, speed: 0, status: 'done' };
+        return { ...t, done, speed };
+      });
+    }), 300);
+    return () => clearInterval(id);
+  }, []);
+  const sum = transferSummary(transfers);
+  const wasRunning = useRef(sum.running);
+  useEffect(() => {
+    if (wasRunning.current && !sum.running) toast('Windows notification: transfers finished', { icon: 'bell', kind: 'ok', sub: `${sum.finished} done${sum.failed ? `, ${sum.failed} failed` : ''}` });
+    wasRunning.current = sum.running;
+  }, [sum.running]);
+
+  // listing log + recent folders follow the active tab
+  useEffect(() => {
+    if (!active.host || conn[active.host] !== 'connected') return;
+    const n = listDir(active.host, active.path).length;
+    addLog(active.host, n > 5000 ? `LIST ${active.path}: ${n.toLocaleString()} entries, streamed in ${Math.ceil(n / 4000)} batches` : `LIST ${active.path}: ${n} entries`);
+    setRecent(r => [{ host: active.host, path: active.path }, ...r.filter(x => !(x.host === active.host && x.path === active.path))].slice(0, 10));
+  }, [active.host, active.path, conn[active.host]]);
+
+  return {
+    tabs, active, activeId, setActiveId, conn, hidden, toggleHidden: () => setHidden(h => !h), bookmarks, recent, transfers, toasts, log, cmdLog, menu, ui, tick,
+    toast, addLog, updateTab, setUi, navigate, goBack, goForward, goUp, connect, cancelConnect, disconnect, openHost, quickConnect, newTab, closeTab,
+    openEntry, download, upload, pickUpload, cancelTransfer, retryTransfer, clearFinished, openTerminal, runCommand, clearCmdLog: () => setCmdLog([]),
+    copy, toggleBookmark, isBookmarked, act, refresh, setSort, startSearch, clearSearch, openMenu, openMenuAt, closeMenu: () => setMenu(null), entryMenu, folderMenu,
+  };
+}
+
+function useTabView(app, tab) {
+  const all = useMemo(() => (tab.host ? listDir(tab.host, tab.path) : []), [tab.host, tab.path, app.tick]);
+  const view = useMemo(() => viewEntries(all, tab.sort, tab.filter, app.hidden), [all, tab.sort, tab.filter, app.hidden]);
+  const byName = useMemo(() => new Map(all.map(e => [e.name, e])), [all]);
+  const selected = useMemo(() => tab.sel.map(n => byName.get(n)).filter(Boolean), [tab.sel, byName]);
+  return { all, view, byName, selected };
+}
+
+/* ===================================================================== shared primitives (would be shadcn/ui) */
+function IconBtn({ icon, title, onClick, disabled, active, size = 16, className = '' }) {
+  return (
+    <button title={title} disabled={disabled} onClick={onClick}
+      className={`h-8 w-8 grid place-items-center rounded-md hover:bg-hover disabled:opacity-30 disabled:hover:bg-transparent ${active ? 'text-accent bg-hover' : ''} ${className}`}>
+      <Icon name={icon} size={size} />
+    </button>
+  );
+}
+function CmdBtn({ icon, label, title, onClick, disabled, active, caret }) {
+  return (
+    <button title={title || label} disabled={disabled} onClick={onClick}
+      className={`h-8 px-2 flex items-center gap-1.5 rounded-md hover:bg-hover disabled:opacity-30 disabled:hover:bg-transparent text-[12.5px] whitespace-nowrap ${active ? 'bg-hover' : ''}`}>
+      <Icon name={icon} size={15} className={active ? 'text-accent' : 'text-muted'} />
+      {label && <span>{label}</span>}
+      {caret && <Icon name="chevronDown" size={12} className="text-muted" />}
+    </button>
+  );
+}
+function Dot({ state }) {
+  const c = state === 'connected' ? 'bg-ok' : state === 'connecting' ? 'bg-warn animate-pulse' : 'border border-muted';
+  return <span title={state || 'not connected'} className={`inline-block w-2 h-2 rounded-full shrink-0 ${c}`} />;
+}
+const Sep = () => <div className="w-px h-5 bg-line mx-1 shrink-0" />;
+const SectionLabel = ({ children, right }) => <div className="flex items-center px-2 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">{children}<div className="flex-1" />{right}</div>;
+function Progress({ pct, className = '', tone = 'accent' }) {
+  return <div className={`h-1.5 rounded-full bg-chip overflow-hidden ${className}`}><div className={`h-full rounded-full ${tone === 'bad' ? 'bg-bad' : tone === 'ok' ? 'bg-ok' : 'bg-accent'}`} style={{ width: Math.max(2, Math.min(100, pct)) + '%', transition: 'width .3s linear' }} /></div>;
+}
+function WinControls() {
+  return (
+    <div className="flex self-stretch">
+      {['minus', 'square', 'x'].map(n => (
+        <div key={n} className={`w-11 grid place-items-center text-muted ${n === 'x' ? 'hover:bg-[#C42B1C] hover:text-white' : 'hover:bg-hover'}`}><Icon name={n} size={n === 'square' ? 11 : 14} sw={1.4} /></div>
+      ))}
+    </div>
+  );
+}
+const FilterBox = forwardRef(function FilterBox({ value, onChange, onEnter, className = '', placeholder = 'Filter this folder', round = false, hint = true }, ref) {
+  return (
+    <div className={`flex items-center gap-2 h-8 px-2.5 ${round ? 'rounded-full' : 'rounded-md'} bg-panel border border-line focus-within:border-accent ${className}`}>
+      <Icon name="search" size={14} className="text-muted" />
+      <input ref={ref} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Escape') { onChange(''); e.target.blur(); } if (e.key === 'Enter' && onEnter) onEnter(value); }}
+        className="flex-1 min-w-0 bg-transparent outline-none text-[12.5px]" />
+      {value && hint && onEnter && <span className="text-[10.5px] text-muted whitespace-nowrap" title="Press Enter to search every subfolder on the server">↵ subfolders</span>}
+      {value && <button onClick={() => onChange('')} className="text-muted hover:text-fg"><Icon name="x" size={13} /></button>}
+    </div>
+  );
+});
+function FileIcon({ e, size = 16 }) {
+  const dir = isDirish(e);
+  return (
+    <span className="relative shrink-0 inline-block" style={{ width: size, height: size }}>
+      <Icon name={dir ? 'folder' : fileIconName(e.name)} size={size} fill={dir} className={dir ? 'text-accent' : 'text-muted'} />
+      {e.type === 'link' && <span className="absolute -bottom-1 -right-1 rounded-sm bg-panel text-fg"><Icon name="cornerRight" size={10} sw={2.6} /></span>}
+    </span>
+  );
+}
+function InfoRows({ rows }) {
+  return (
+    <dl className="grid grid-cols-[88px_1fr] gap-x-3 gap-y-1.5 text-[12px] mt-3">
+      {rows.filter(Boolean).map(([k, v]) => <Fragment key={k}><dt className="text-muted">{k}</dt><dd className="min-w-0 break-words">{v}</dd></Fragment>)}
+    </dl>
+  );
+}
+
+/* ===================================================================== shared: path bar */
+function PathBar({ app, tab, variant = 'bar', className = '' }) {
+  const h = hostOf(tab.host);
+  const [edit, setEdit] = useState(false);
+  const [val, setVal] = useState(tab.path);
+  const inp = useRef(null);
+  useEffect(() => { setEdit(false); setVal(tab.path); }, [tab.path, tab.id]);
+  useEvent('focus-path', () => setEdit(true));
+  useEffect(() => { if (edit && inp.current) { inp.current.focus(); inp.current.select(); } }, [edit]);
+  const commit = () => {
+    const p = resolvePath(val, tab.path, h.home);
+    if (!p) return;
+    setEdit(false); app.navigate(p);
+  };
+  const big = variant === 'big';
+  const box = variant === 'bar' ? 'h-8 px-1.5 rounded-md bg-bg border border-line' : big ? 'h-10 px-1 rounded-lg' : 'h-7 px-1 rounded-md';
+  if (edit) {
+    return <input ref={inp} value={val} onChange={e => setVal(e.target.value)} onBlur={() => setEdit(false)}
+      onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setEdit(false); setVal(tab.path); } }}
+      className={`${box} ${className} font-mono ${big ? 'text-[15px] px-3' : 'text-[12.5px] px-2'} outline-none border border-accent bg-panel min-w-0`} />;
+  }
+  const crumbs = [{ label: big ? tab.host : '/', path: big ? h.home : '/' }];
+  if (big) crumbs.push({ label: '/', path: '/' });
+  segs(tab.path).forEach((p, i, a) => crumbs.push({ label: p, path: '/' + a.slice(0, i + 1).join('/') }));
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) setEdit(true); }} title="Click empty space or press Ctrl+L to type a path (~ and relative paths work)"
+      className={`flex items-center min-w-0 overflow-hidden cursor-text ${box} ${className}`}>
+      {variant === 'bar' && <span className="shrink-0 flex items-center gap-1.5 px-1.5 h-5 mr-1 rounded bg-chip text-[11.5px]"><Dot state={app.conn[tab.host]} />{tab.host}</span>}
+      {crumbs.map((c, i) => {
+        const last = i === crumbs.length - 1;
+        return (
+          <Fragment key={i}>
+            {i > 0 && !(big && i === 1) && !(i === 1 && !big) && <Icon name="chevronRight" size={big ? 16 : 13} className="text-muted opacity-60 mx-px" />}
+            {big && i === 1 && <span className="text-muted mx-1 text-[18px]">:</span>}
+            <button onClick={() => app.navigate(c.path)}
+              className={`shrink-0 truncate max-w-[220px] px-1.5 rounded hover:bg-hover ${big ? (i === 0 ? 'text-[18px] text-accent font-semibold' : last ? 'text-[18px] font-semibold' : 'text-[18px] text-muted') : last ? 'font-medium' : 'text-muted'}`}>
+              {c.label}
+            </button>
+          </Fragment>
+        );
+      })}
+      <div className="flex-1 self-stretch" onClick={() => setEdit(true)} />
+    </div>
+  );
+}
+
+/* ===================================================================== shared: virtualised file list */
+const COLS = {
+  name: { label: 'Name', w: 'minmax(220px,1fr)' }, mtime: { label: 'Modified', w: '138px' }, size: { label: 'Size', w: '84px', right: true },
+  perms: { label: 'Permissions', w: '100px' }, owner: { label: 'Owner', w: '84px' },
+};
+function FileList({ app, tab, tv, density = 'compact', columns = ['name', 'mtime', 'size', 'perms', 'owner'], rounded = false }) {
+  const rowH = density === 'compact' ? 26 : 38;
+  const ref = useRef(null);
+  const [scroll, setScroll] = useState(0);
+  const [height, setHeight] = useState(600);
+  const [focused, setFocused] = useState(false);
+  const [drop, setDrop] = useState(null);
+  const typeBuf = useRef({ s: '', t: 0 });
+  const { view } = tv;
+  const tmpl = columns.map(c => COLS[c].w).join(' ');
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(() => setHeight(el.clientHeight)); ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const selSet = useMemo(() => new Set(tab.sel), [tab.sel]);
+  const indexOf = useMemo(() => { const m = new Map(); view.forEach((e, i) => m.set(e.name, i)); return m; }, [view]);
+  const ensureVisible = (i) => {
+    const el = ref.current; if (!el) return;
+    const top = i * rowH;
+    if (top < el.scrollTop) el.scrollTop = top; else if (top + rowH > el.scrollTop + el.clientHeight) el.scrollTop = top + rowH - el.clientHeight;
+  };
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    el.scrollTop = 0; setScroll(0);
+    if (tab.cursor != null && indexOf.has(tab.cursor)) { const i = indexOf.get(tab.cursor); el.scrollTop = Math.max(0, i * rowH - el.clientHeight / 2); }
+    el.focus({ preventScroll: true });
+  }, [tab.id, tab.path]);
+  const set = (patch) => app.updateTab(tab.id, () => patch);
+  const rangeTo = (i) => { const a = indexOf.get(tab.anchor); const [lo, hi] = a < i ? [a, i] : [i, a]; return view.slice(lo, hi + 1).map(x => x.name); };
+  const click = (e, i, ev) => {
+    if (ev.shiftKey && tab.anchor != null && indexOf.has(tab.anchor)) set({ sel: ev.ctrlKey ? [...new Set([...tab.sel, ...rangeTo(i)])] : rangeTo(i), cursor: e.name });
+    else if (ev.ctrlKey || ev.metaKey) set({ sel: selSet.has(e.name) ? tab.sel.filter(n => n !== e.name) : [...tab.sel, e.name], cursor: e.name, anchor: e.name });
+    else set({ sel: [e.name], cursor: e.name, anchor: e.name });
+  };
+  const onKey = (ev) => {
+    if (ev.target !== ref.current || !view.length) return;
+    const ci = tab.cursor != null && indexOf.has(tab.cursor) ? indexOf.get(tab.cursor) : -1;
+    const move = (ni) => {
+      ev.preventDefault();
+      ni = Math.max(0, Math.min(view.length - 1, ni));
+      const n = view[ni].name;
+      if (ev.shiftKey && tab.anchor != null && indexOf.has(tab.anchor)) set({ sel: rangeTo(ni), cursor: n });
+      else set({ sel: [n], cursor: n, anchor: n });
+      ensureVisible(ni);
+    };
+    const page = Math.max(1, Math.floor(height / rowH) - 1);
+    const selected = tab.sel.map(n => tv.byName.get(n)).filter(Boolean);
+    if (ev.key === 'ArrowDown') return move(ci + 1);
+    if (ev.key === 'ArrowUp') return move(ci < 0 ? 0 : ci - 1);
+    if (ev.key === 'Home') return move(0);
+    if (ev.key === 'End') return move(view.length - 1);
+    if (ev.key === 'PageDown') return move(ci + page);
+    if (ev.key === 'PageUp') return move(ci - page);
+    if (ev.key === 'Enter' && ci >= 0) { ev.preventDefault(); return app.openEntry(tab, view[ci]); }
+    if (ev.key === 'Backspace') { ev.preventDefault(); return app.goUp(); }
+    if (ev.ctrlKey && ev.key.toLowerCase() === 'a') { ev.preventDefault(); return set({ sel: view.map(x => x.name) }); }
+    if (ev.ctrlKey && ev.shiftKey && ev.key.toLowerCase() === 'c' && selected.length) { ev.preventDefault(); return app.copy(selected.map(e => joinPath(tab.path, e.name)).join('\n')); }
+    if (ev.key === 'Escape') return set({ sel: [] });
+    if (ev.key === 'Delete' && selected.length) return app.act('delete', selected);
+    if (ev.key === 'F2' && selected.length === 1) return app.act('rename', selected);
+    if (ev.key.length === 1 && !ev.ctrlKey && !ev.altKey && !ev.metaKey && ev.key !== ' ') {
+      ev.preventDefault();
+      const now = Date.now(), b = typeBuf.current;
+      b.s = (now - b.t < 800 ? b.s : '') + ev.key.toLowerCase(); b.t = now;
+      const from = b.s.length === 1 ? ci + 1 : Math.max(ci, 0);
+      for (let k = 0; k < view.length; k++) {
+        const j = (from + k) % view.length;
+        if (view[j].name.toLowerCase().startsWith(b.s)) { const n = view[j].name; set({ sel: [n], cursor: n, anchor: n }); ensureVisible(j); break; }
+      }
+    }
+  };
+  const onDragOver = (e) => {
+    if (![...e.dataTransfer.types].includes('Files')) return;
+    e.preventDefault();
+    const row = e.target.closest && e.target.closest('[data-dir]');
+    setDrop(row ? joinPath(tab.path, row.dataset.dir) : tab.path);
+  };
+  const onDrop = (e) => {
+    e.preventDefault();
+    const to = drop || tab.path; setDrop(null);
+    app.upload(tab, [...e.dataTransfer.files].map(f => ({ name: f.name, size: f.size })), to);
+  };
+  const start = Math.max(0, Math.floor(scroll / rowH) - 10);
+  const end = Math.min(view.length, Math.ceil((scroll + height) / rowH) + 10);
+  const cell = (k, e) => k === 'name' ? (
+      <div className={`flex items-center gap-2 min-w-0 ${e.name.startsWith('.') ? 'opacity-70' : ''}`}>
+        <FileIcon e={e} size={density === 'compact' ? 16 : 18} />
+        <span className="truncate">{e.name}</span>
+        {e.target && <span className="text-muted truncate text-[11.5px]">→ {e.target}</span>}
+      </div>)
+    : k === 'size' ? <div className="text-right text-muted tabular-nums">{e.type === 'file' ? fmtSize(e.size) : ''}</div>
+    : k === 'mtime' ? <div className="text-muted tabular-nums truncate">{fmtDate(e.mtime)}</div>
+    : k === 'perms' ? <div className="font-mono text-[11.5px] text-muted">{e.perms}</div>
+    : <div className="text-muted truncate">{e.owner}</div>;
+  return (
+    <div className="flex-1 flex flex-col min-h-0 relative">
+      <div className={`grid items-center gap-3 px-3 shrink-0 border-b border-line text-[11.5px] text-muted select-none ${density === 'compact' ? 'h-7' : 'h-9'} pr-[22px]`} style={{ gridTemplateColumns: tmpl }}>
+        {columns.map(c => (
+          <button key={c} onClick={() => app.setSort(tab, c)} className={`flex items-center gap-1 h-full hover:text-fg ${COLS[c].right ? 'justify-end' : ''} ${tab.sort.key === c ? 'text-fg font-medium' : ''}`}>
+            {COLS[c].label}{tab.sort.key === c && <Icon name={tab.sort.dir > 0 ? 'chevronUp' : 'chevronDown'} size={12} />}
+          </button>
+        ))}
+      </div>
+      <div ref={ref} tabIndex={0} onKeyDown={onKey} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        onScroll={e => setScroll(e.currentTarget.scrollTop)} onDragOver={onDragOver} onDragLeave={e => { if (e.target === ref.current) setDrop(null); }} onDrop={onDrop}
+        onMouseDown={e => { if (e.target === ref.current || e.target.dataset.spacer) set({ sel: [] }); }}
+        onContextMenu={e => { if (e.target === ref.current || e.target.dataset.spacer) { e.preventDefault(); set({ sel: [] }); app.openMenu({ x: e.clientX, y: e.clientY }, app.folderMenu(tab)); } }}
+        className="flex-1 overflow-auto outline-none relative">
+        <div data-spacer="1" style={{ height: Math.max(view.length * rowH, 1), position: 'relative' }}>
+          {view.slice(start, end).map((e, k) => {
+            const i = start + k, s = selSet.has(e.name), cur = focused && tab.cursor === e.name;
+            return (
+              <div key={e.name} data-dir={isDirish(e) ? e.name : undefined}
+                style={{ position: 'absolute', top: i * rowH, height: rowH, left: 0, right: 0, gridTemplateColumns: tmpl, boxShadow: cur ? 'inset 0 0 0 1px var(--accent)' : undefined }}
+                className={`grid items-center gap-3 px-3 select-none ${rounded ? 'rounded-md mx-1.5' : ''} ${s ? 'bg-sel' : 'hover:bg-hover'} ${drop && isDirish(e) && drop === joinPath(tab.path, e.name) ? 'ring-2 ring-inset ring-accent' : ''}`}
+                onMouseDown={ev => { if (ev.button === 0) click(e, i, ev); }}
+                onDoubleClick={() => app.openEntry(tab, e)}
+                onContextMenu={ev => {
+                  ev.preventDefault(); ev.stopPropagation();
+                  const ents = s ? tab.sel.map(n => tv.byName.get(n)).filter(Boolean) : [e];
+                  if (!s) set({ sel: [e.name], cursor: e.name, anchor: e.name });
+                  app.openMenu({ x: ev.clientX, y: ev.clientY }, app.entryMenu(tab, ents));
+                }}>
+                {columns.map(c => <Fragment key={c}>{cell(c, e)}</Fragment>)}
+              </div>
+            );
+          })}
+        </div>
+        {!view.length && (
+          <div className="absolute inset-0 grid place-items-center text-muted pointer-events-none">
+            <div className="text-center"><Icon name={tab.filter ? 'search' : 'folder'} size={28} className="mx-auto mb-2 opacity-50" />{tab.filter ? <>Nothing here matches “{tab.filter}”.<div className="text-[12px] mt-1">Press Enter in the filter to search every subfolder.</div></> : 'This folder is empty'}</div>
+          </div>
+        )}
+      </div>
+      {drop && (
+        <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-accent rounded-md grid place-items-end justify-center pb-6">
+          <div className="px-3 py-1.5 rounded-full bg-accent text-white text-[12px] shadow-lg flex items-center gap-1.5"><Icon name="upload" size={14} />Drop to upload to {drop}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===================================================================== shared: connection gate, search results, preview */
+function ConnGate({ app, tab, children }) {
+  const st = app.conn[tab.host] || 'idle', h = hostOf(tab.host);
+  if (st === 'connected') return children;
+  return (
+    <div className="flex-1 grid place-items-center">
+      <div className="text-center max-w-xs">
+        <div className="w-12 h-12 rounded-xl grid place-items-center bg-chip mx-auto mb-3 text-muted">{st === 'connecting' ? <Spinner size={20} /> : <Icon name="server" size={22} />}</div>
+        <div className="font-semibold">{st === 'connecting' ? `Connecting to ${tab.host}…` : `Not connected to ${tab.host}`}</div>
+        <div className="text-muted text-[12px] mt-1 font-mono">{h.user}@{h.hostname}:{h.port}</div>
+        {st === 'connecting'
+          ? <button onClick={() => app.cancelConnect(tab.host)} className="mt-4 h-8 px-4 rounded-md border border-line hover:bg-hover">Cancel</button>
+          : <button onClick={() => app.connect(tab.host)} className="mt-4 h-8 px-4 rounded-md bg-accent text-white hover:opacity-90">Connect</button>}
+        {h.alias === 'pi' && st === 'connecting' && <div className="text-[11.5px] text-muted mt-3">This Host is slow on purpose, so you can see the cancellable state.</div>}
+      </div>
+    </div>
+  );
+}
+function SearchResults({ app, tab, compact = false }) {
+  const s = tab.search;
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className={`flex items-center gap-2 px-3 ${compact ? 'py-2 flex-wrap' : 'h-9'} border-b border-line text-[12px] bg-hover`}>
+        {s.running ? <Spinner /> : <Icon name="search" size={14} className="text-muted" />}
+        <span>{s.running ? 'Searching' : <><b>{s.results.length}{s.results.length >= 300 ? '+' : ''}</b> matches for</>} <b>{s.pattern}</b> under {s.root}{s.running ? '…' : ''}</span>
+        {!compact && <span className="text-muted font-mono truncate">find '{s.root}' -iname '{s.pattern}'{s.ms ? ` · ${(s.ms / 1000).toFixed(1)} s` : ''}</span>}
+        <div className="flex-1" />
+        <button onClick={() => app.clearSearch(tab)} className="h-6 px-2 rounded hover:bg-panel text-muted hover:text-fg">Close search</button>
+      </div>
+      <div className="flex-1 overflow-auto py-1">
+        {s.results.map(r => (
+          <div key={r.path} onDoubleClick={() => (isDirish(r.e) ? app.navigate(r.path) : app.navigate(r.dir, tab.id, r.e.name))}
+            onClick={() => app.navigate(r.dir, tab.id, r.e.name)} title="Click to reveal it in its folder"
+            className={`flex items-center gap-2 px-3 ${compact ? 'h-auto py-1.5' : 'h-7'} hover:bg-hover cursor-default`}>
+            <FileIcon e={r.e} />
+            <div className={`min-w-0 ${compact ? '' : 'flex items-center gap-2 flex-1'}`}>
+              <div className="truncate">{r.e.name}</div>
+              <div className="text-muted truncate text-[11.5px]">{r.dir}</div>
+            </div>
+            {!compact && <span className="ml-auto text-muted tabular-nums">{r.e.type === 'file' ? fmtSize(r.e.size) : ''}</span>}
+          </div>
+        ))}
+        {!s.running && !s.results.length && <div className="text-muted text-center py-8">No matches.</div>}
+      </div>
+    </div>
+  );
+}
+function hl(line, lang) {
+  if (lang === 'md') return /^#/.test(line) ? <span className="text-accent font-semibold">{line}</span> : line;
+  if (lang === 'log') {
+    const m = line.match(/^(\S+ \S+ \S+|\S+ - - \[[^\]]+\]|\d{4}\/\d\d\/\d\d \S+)(.*)$/);
+    const body = m ? m[2] : line;
+    return <>{m && <span className="text-muted">{m[1]}</span>}<span className={/error|fail|invalid|502|BLOCK/i.test(body) ? 'text-bad' : /warn|404/i.test(body) ? 'text-warn' : ''}>{body}</span></>;
+  }
+  const re = lang === 'js'
+    ? /(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)|\b(const|let|var|function|return|import|from|async|await|new|true|false|null)\b|\b(\d+(?:\.\d+)?)\b/g
+    : /(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(server|listen|location|server_name|proxy_pass|proxy_set_header|root|index|include|return|if|then|else|fi|for|do|done|export|echo|cd|set|def|import|from|as|in|not|and|or|user|events|http|alias|Host|Port|User)\b|\b(\d+(?:\.\d+)?)\b/g;
+  const out = []; let last = 0, m, k = 0;
+  while ((m = re.exec(line))) {
+    if (m.index > last) out.push(line.slice(last, m.index));
+    out.push(<span key={k++} className={m[1] ? 'text-muted italic' : m[2] ? 'text-[color:var(--str)]' : m[3] ? 'text-accent' : 'text-[color:var(--num)]'}>{m[0]}</span>);
+    last = re.lastIndex;
+    if (!m[0].length) re.lastIndex++;
+  }
+  out.push(line.slice(last));
+  return out;
+}
+function Center({ icon, title, sub, children }) {
+  return (
+    <div className="h-full min-h-[180px] grid place-items-center p-6 text-center">
+      <div><Icon name={icon} size={30} className="mx-auto mb-2 text-muted opacity-70" /><div className="font-medium">{title}</div>{sub && <div className="text-muted text-[12px] mt-1">{sub}</div>}{children}</div>
+    </div>
+  );
+}
+function PreviewBody({ app, tab, e }) {
+  if (isDirish(e)) {
+    const n = listDir(tab.host, joinPath(tab.path, e.name)).length;
+    return <Center icon="folder" title={`${n.toLocaleString()} items`} sub={e.link ? `Symlink to ${e.target}` : 'Double-click to open'} />;
+  }
+  const k = previewKind(e.name);
+  if (!k) return <Center icon={fileIconName(e.name)} title="No preview" sub={`${extOf(e.name) ? '.' + extOf(e.name) : 'These'} files aren’t previewed`} />;
+  const limit = k === 'text' ? TEXT_LIMIT : IMG_LIMIT;
+  if (e.size > limit) {
+    return (
+      <Center icon={fileIconName(e.name)} title="Too large to preview" sub={`${fmtSize(e.size)}. Previews stop at ${fmtSize(limit)}.`}>
+        <button onClick={() => app.openEntry(tab, e)} className="mt-3 h-7 px-3 rounded-md border border-line hover:bg-hover text-[12px]">Open in editor</button>
+      </Center>
+    );
+  }
+  if (k === 'image') {
+    const hue = hash(e.name) % 360;
+    return (
+      <div className="p-4">
+        <div className="rounded-lg w-full shadow-inner" style={{ aspectRatio: '4 / 3', background: `radial-gradient(circle at 30% 30%, hsl(${(hue + 40) % 360} 70% 75% / .9), transparent 45%), linear-gradient(160deg, hsl(${hue} 55% 58%), hsl(${(hue + 60) % 360} 45% 28%))` }} />
+        <div className="text-muted text-[11.5px] mt-2 text-center">4032 × 3024 · {extOf(e.name).toUpperCase()} · {fmtSize(e.size)}</div>
+      </div>
+    );
+  }
+  const lines = fileText(e.name).split('\n'), lang = langOf(e.name);
+  return (
+    <div className="font-mono text-[11.5px] leading-[18px] py-2 whitespace-pre">
+      {lines.map((l, i) => <div key={i} className="flex pr-3"><span className="w-9 shrink-0 text-right pr-3 text-muted opacity-50 select-none">{i + 1}</span><span>{hl(l, lang)}</span></div>)}
+    </div>
+  );
+}
+function Inspector({ app, tab, tv, actions = false }) {
+  const sel = tv.selected, h = hostOf(tab.host);
+  if (!tab.host) return null;
+  if (sel.length === 0) {
+    const dirs = tv.all.filter(isDirish).length, files = tv.all.length - dirs;
+    return (
+      <div className="p-4 overflow-auto">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg grid place-items-center bg-chip text-accent"><Icon name="folder" size={20} fill /></div>
+          <div className="min-w-0"><div className="font-semibold truncate">{baseName(tab.path)}</div><div className="text-muted text-[12px] truncate">{tab.host}:{tab.path}</div></div>
+        </div>
+        <InfoRows rows={[['Contents', `${dirs.toLocaleString()} folders, ${files.toLocaleString()} files`], ['Files total', fmtSize(sumSize(tv.all))], ['Host', `${h.user}@${h.hostname}:${h.port}`]]} />
+        <div className="text-muted text-[12px] mt-5">Select a file to preview it. Text and images are previewed up to 1 MB and 20 MB.</div>
+      </div>
+    );
+  }
+  if (sel.length > 1) {
+    return (
+      <div className="p-4 overflow-auto">
+        <div className="font-semibold">{sel.length.toLocaleString()} items selected</div>
+        <InfoRows rows={[['Files total', fmtSize(sumSize(sel))], ['Folders', sel.filter(isDirish).length.toLocaleString()]]} />
+        <div className="mt-4 space-y-1">{sel.slice(0, 10).map(e => <div key={e.name} className="flex items-center gap-2 text-[12px]"><FileIcon e={e} size={14} /><span className="truncate">{e.name}</span></div>)}</div>
+        {sel.length > 10 && <div className="text-muted text-[12px] mt-1">and {(sel.length - 10).toLocaleString()} more</div>}
+        {actions && <ActionGrid app={app} tab={tab} ents={sel} />}
+      </div>
+    );
+  }
+  const e = sel[0];
+  return (
+    <div className="flex flex-col min-h-0 h-full">
+      <div className="flex-1 min-h-0 overflow-auto bg-term border-b border-line"><PreviewBody app={app} tab={tab} e={e} /></div>
+      <div className="p-4 shrink-0 overflow-auto max-h-[55%]">
+        <div className="font-semibold break-all">{e.name}</div>
+        <InfoRows rows={[
+          ['Type', kindLabel(e)],
+          e.type === 'file' && ['Size', `${fmtSize(e.size)} (${e.size.toLocaleString()} bytes)`],
+          ['Modified', fmtDateLong(e.mtime)],
+          ['Permissions', <span className="font-mono">{e.perms} · {octal(e.perms)}</span>],
+          ['Owner', `${e.owner}:${e.owner}`],
+          e.target && ['Link to', <span className="font-mono">{e.target}</span>],
+          ['Path', <span className="font-mono break-all">{joinPath(tab.path, e.name)}</span>],
+        ]} />
+        {actions && <ActionGrid app={app} tab={tab} ents={[e]} />}
+      </div>
+    </div>
+  );
+}
+function ActionGrid({ app, tab, ents }) {
+  const one = ents.length === 1 ? ents[0] : null;
+  const b = 'h-8 px-2 rounded-md border border-line hover:bg-hover flex items-center gap-1.5 text-[12px]';
+  return (
+    <div className="grid grid-cols-2 gap-2 mt-4">
+      <button className={`${b} bg-accent text-white border-transparent hover:bg-accent hover:opacity-90`} onClick={() => app.download(tab, ents)}><Icon name="download" size={14} />Download</button>
+      {one && !isDirish(one) ? <button className={b} onClick={() => app.openEntry(tab, one)}><Icon name="pencil" size={14} />Open in editor</button>
+        : one ? <button className={b} onClick={() => app.openEntry(tab, one)}><Icon name="folder" size={14} />Open</button> : <span />}
+      <button className={b} onClick={() => app.copy(ents.map(e => joinPath(tab.path, e.name)).join('\n'))}><Icon name="copy" size={14} />Copy path</button>
+      <button className={b} onClick={() => app.act('perms', ents)}><Icon name="lock" size={14} />Permissions</button>
+      {one && <button className={b} onClick={() => app.act('rename', ents)}><Icon name="pencil" size={14} />Rename</button>}
+      <button className={`${b} text-bad`} onClick={() => app.act('delete', ents)}><Icon name="trash" size={14} />Delete</button>
+    </div>
+  );
+}
+
+/* ===================================================================== shared: transfers, command runner, launcher */
+function TransferRow({ app, t, layout = 'table' }) {
+  const pct = t.size ? (t.done / t.size) * 100 : 0;
+  const status = t.status === 'active' ? `${fmtSpeed(t.speed)} · ${fmtEta((t.size - t.done) / t.speed)} left`
+    : t.status === 'queued' ? 'Queued' : t.status === 'done' ? 'Done' : t.status === 'failed' ? t.error : 'Cancelled';
+  const route = t.dir === 'down' ? `${t.host}:${t.from} → Downloads` : `${t.from} → ${t.host}:${t.to}`;
+  const action = t.status === 'active' || t.status === 'queued' ? <IconBtn icon="x" size={14} title="Cancel" onClick={() => app.cancelTransfer(t.id)} className="h-6 w-6" />
+    : t.status === 'failed' ? <IconBtn icon="refresh" size={14} title="Retry" onClick={() => app.retryTransfer(t.id)} className="h-6 w-6" />
+    : t.status === 'done' && t.dir === 'down' ? <IconBtn icon="folder" size={14} title="Show in Explorer" onClick={() => app.toast('Would open Explorer with the file selected', { icon: 'folder', mono: `explorer /select,"${LOCAL_DOWNLOADS}\\${t.name}"` })} className="h-6 w-6" /> : <span className="w-6" />;
+  const tone = t.status === 'failed' ? 'bad' : t.status === 'done' ? 'ok' : 'accent';
+  const icon = <Icon name={t.dir === 'down' ? 'download' : 'upload'} size={14} className={t.status === 'failed' ? 'text-bad' : t.status === 'done' ? 'text-ok' : 'text-muted'} />;
+  if (layout === 'stack') {
+    return (
+      <div className="px-3 py-2.5 border-b border-line last:border-0">
+        <div className="flex items-center gap-2">{icon}<span className="truncate flex-1 font-medium text-[12.5px]">{t.name}</span>{action}</div>
+        <Progress pct={pct} tone={tone} className="my-1.5" />
+        <div className="flex gap-2 text-[11px] text-muted"><span className="truncate flex-1">{route}</span><span className={`shrink-0 ${t.status === 'failed' ? 'text-bad truncate max-w-[60%]' : ''}`} title={status}>{t.status === 'active' ? `${fmtSize(t.done)} of ${fmtSize(t.size)} · ` : ''}{status}</span></div>
+      </div>
+    );
+  }
+  return (
+    <div className="grid items-center gap-3 px-3 h-8 border-b border-line text-[12px] hover:bg-hover" style={{ gridTemplateColumns: '16px minmax(160px,1.2fr) minmax(160px,1.4fr) 140px 110px minmax(150px,1fr) 24px' }}>
+      {icon}
+      <span className="truncate">{t.name}</span>
+      <span className="truncate text-muted">{route}</span>
+      <Progress pct={pct} tone={tone} />
+      <span className="text-muted tabular-nums">{fmtSize(t.done)} / {fmtSize(t.size)}</span>
+      <span className={`truncate ${t.status === 'failed' ? 'text-bad' : 'text-muted'}`} title={status}>{status}</span>
+      {action}
+    </div>
+  );
+}
+function CommandRunner({ app, tab, onClose, header = true }) {
+  const h = hostOf(tab.host);
+  const [cmd, setCmd] = useState('');
+  const [hist, setHist] = useState(-1);
+  const inp = useRef(null), end = useRef(null);
+  useEffect(() => { end.current && end.current.scrollIntoView({ block: 'end' }); }, [app.cmdLog.length]);
+  useEffect(() => { inp.current && inp.current.focus(); }, []);
+  const short = (p, home) => (p.startsWith(home) ? '~' + p.slice(home.length) : p);
+  const prompt = `${h.user}@${h.alias}:${short(tab.path, h.home)}$`;
+  const past = app.cmdLog.map(c => c.cmd);
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {header && (
+        <div className="h-11 flex items-center gap-2 px-4 border-b border-line shrink-0">
+          <Icon name="play" size={15} className="text-accent" /><div className="font-semibold">Run command</div>
+          <div className="text-muted text-[12px] truncate">on {tab.host}, in {tab.path}</div>
+          <div className="flex-1" />
+          <button onClick={app.clearCmdLog} className="h-7 px-2 rounded-md hover:bg-hover text-muted text-[12px]">Clear output</button>
+          {onClose && <IconBtn icon="x" title="Close (Esc)" onClick={onClose} />}
+        </div>
+      )}
+      <div className="flex-1 overflow-auto bg-term font-mono text-[12px] leading-5 p-3">
+        {!app.cmdLog.length && <div className="text-muted font-sans text-[12.5px] leading-relaxed">Runs one command on the server and shows what it prints. It isn’t an interactive terminal, so for that use “Open terminal here”.<br />Try <span className="font-mono">df -h</span>, <span className="font-mono">ls -la</span>, <span className="font-mono">uptime</span>, <span className="font-mono">tail syslog</span> or <span className="font-mono">systemctl status app</span>.</div>}
+        {app.cmdLog.map(c => (
+          <div key={c.id} className="mb-3">
+            <div><span className="text-muted">{c.t} </span><span className="text-accent">{c.user}@{c.host}:{short(c.cwd, hostOf(c.host).home)}$</span> {c.cmd}</div>
+            <pre className="whitespace-pre-wrap m-0">{c.out}</pre>
+            {c.code !== 0 && <div className="text-bad text-[11px]">exit {c.code}</div>}
+          </div>
+        ))}
+        <div ref={end} />
+      </div>
+      <div className="flex items-center gap-2 px-3 h-10 border-t border-line font-mono text-[12px] shrink-0 bg-panel">
+        <span className="text-accent shrink-0">{prompt}</span>
+        <input ref={inp} value={cmd} onChange={e => setCmd(e.target.value)} placeholder="type a command, then Enter"
+          onKeyDown={e => {
+            if (e.key === 'Enter' && cmd.trim()) { app.runCommand(tab, cmd.trim()); setCmd(''); setHist(-1); }
+            if (e.key === 'ArrowUp' && past.length) { e.preventDefault(); const i = hist < 0 ? past.length - 1 : Math.max(0, hist - 1); setHist(i); setCmd(past[i]); }
+            if (e.key === 'ArrowDown' && hist >= 0) { e.preventDefault(); const i = hist + 1; if (i >= past.length) { setHist(-1); setCmd(''); } else { setHist(i); setCmd(past[i]); } }
+            if (e.key === 'Escape' && onClose) onClose();
+          }}
+          className="flex-1 bg-transparent outline-none min-w-0" />
+      </div>
+    </div>
+  );
+}
+function QuickConnectInput({ app, big = false, className = '' }) {
+  const [q, setQ] = useState('');
+  const valid = !!parseQuick(q);
+  const go = () => { if (app.quickConnect(q)) setQ(''); };
+  return (
+    <div className={`flex items-center gap-2 ${big ? 'h-12 px-4 rounded-xl text-[15px]' : 'h-8 px-2 rounded-md text-[12px]'} bg-panel border border-line focus-within:border-accent ${className}`}>
+      <Icon name="zap" size={big ? 18 : 14} className="text-muted" />
+      <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && go()} placeholder={big ? 'Quick Connect: user@host or user@host:port' : 'Quick Connect: user@host'}
+        className="flex-1 bg-transparent outline-none min-w-0" />
+      {q && <button onClick={go} disabled={!valid} className={`${big ? 'h-8 px-4' : 'h-6 px-2'} rounded-md bg-accent text-white disabled:opacity-40 text-[12px]`}>Connect</button>}
+    </div>
+  );
+}
+function Launcher({ app }) {
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="max-w-3xl mx-auto px-8 py-12">
+        <div className="flex items-center gap-3 mb-7">
+          <Logo size={40} />
+          <div><div className="text-[22px] font-semibold leading-tight">Where to?</div><div className="text-muted">Pick a Host from your SSH config, or Quick Connect to a server that isn’t in it.</div></div>
+        </div>
+        <QuickConnectInput app={app} big className="mb-1.5" />
+        <div className="text-muted text-[11.5px] mb-8 pl-1">Quick Connect isn’t saved. To keep a server, add a Host to ~/.ssh/config.</div>
+        <SectionLabel>Hosts · from ~/.ssh/config</SectionLabel>
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          {HOSTS.map(h => (
+            <button key={h.alias} onClick={() => app.openHost(h.alias)} className="text-left p-4 rounded-xl bg-panel border border-line hover:border-accent hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg grid place-items-center bg-chip"><Icon name="server" size={18} /></div>
+                <div className="min-w-0 flex-1"><div className="font-semibold">{h.alias}</div><div className="text-muted text-[12px] font-mono truncate">{h.user}@{h.hostname}{h.port !== 22 ? ':' + h.port : ''}</div></div>
+                <Dot state={app.conn[h.alias]} />
+              </div>
+              <div className="text-muted text-[11.5px] mt-3 flex items-center gap-1.5"><Icon name="star" size={12} />{(app.bookmarks[h.alias] || []).length} bookmarks</div>
+            </button>
+          ))}
+        </div>
+        {app.recent.length > 0 && <>
+          <SectionLabel>Recent folders</SectionLabel>
+          <div className="rounded-xl bg-panel border border-line overflow-hidden">
+            {app.recent.slice(0, 6).map(r => (
+              <button key={r.host + r.path} onClick={() => app.openHost(r.host, { path: r.path })} className="w-full flex items-center gap-3 px-4 h-10 hover:bg-hover text-left border-b border-line last:border-0">
+                <Icon name="folder" size={16} fill className="text-accent" /><span className="font-medium">{baseName(r.path)}</span><span className="text-muted font-mono text-[12px] truncate">{r.host}:{r.path}</span>
+              </button>
+            ))}
+          </div>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+/* ===================================================================== VARIANT A · Explorer */
+function VariantA({ app }) {
+  const tab = app.active, tv = useTabView(app, tab);
+  const [pane, setPane] = useState(true);
+  const [dock, setDock] = useState(true);
+  const filterRef = useRef(null);
+  useEvent('focus-filter', () => filterRef.current && filterRef.current.focus());
+  const sum = transferSummary(app.transfers);
+  const sel = tv.selected;
+  const quickTabs = [...new Set(app.tabs.filter(t => t.host && hostOf(t.host).quick).map(t => t.host))];
+  return (
+    <div className="h-full flex flex-col bg-bg">
+      {/* title bar with Tabs */}
+      <div className="h-10 flex items-end bg-side pl-3 select-none shrink-0">
+        <div className="h-full flex items-center pr-3"><Logo size={18} /></div>
+        <div className="flex items-end gap-px min-w-0 overflow-hidden">
+          {app.tabs.map(t => {
+            const on = t.id === tab.id;
+            return (
+              <div key={t.id} onMouseDown={e => { if (e.button === 1) { e.preventDefault(); app.closeTab(t.id); } else app.setActiveId(t.id); }}
+                className={`group h-8 flex items-center gap-2 pl-3 pr-1.5 rounded-t-lg text-[12px] w-[200px] min-w-[110px] shrink ${on ? 'bg-panel' : 'text-muted hover:bg-hover'}`}>
+                {t.host ? <Dot state={app.conn[t.host]} /> : <Icon name="plus" size={12} />}
+                <span className="truncate">{t.host ? baseName(t.path) : 'New Tab'}</span>
+                {t.host && <span className="truncate text-muted text-[11px]">{t.host}</span>}
+                <button onMouseDown={e => { e.stopPropagation(); app.closeTab(t.id); }} className={`ml-auto h-5 w-5 grid place-items-center rounded hover:bg-hover ${on ? '' : 'opacity-0 group-hover:opacity-100'}`}><Icon name="x" size={12} /></button>
+              </div>
+            );
+          })}
+          <button onClick={() => app.newTab()} title="New Tab (opens the same folder)" className="h-7 w-7 mb-0.5 ml-1 grid place-items-center rounded-md hover:bg-hover text-muted"><Icon name="plus" size={15} /></button>
+        </div>
+        <div className="flex-1 self-stretch" />
+        <WinControls />
+      </div>
+      {tab.host == null ? <Launcher app={app} /> : <>
+        {/* navigation + path + filter */}
+        <div className="h-11 flex items-center gap-0.5 px-2 bg-panel border-b border-line shrink-0">
+          <IconBtn icon="arrowLeft" title="Back (Alt+Left)" disabled={!tab.back.length} onClick={app.goBack} />
+          <IconBtn icon="arrowRight" title="Forward (Alt+Right)" disabled={!tab.fwd.length} onClick={app.goForward} />
+          <IconBtn icon="arrowUp" title="Up (Alt+Up)" disabled={tab.path === '/'} onClick={app.goUp} />
+          <IconBtn icon="refresh" title="Refresh (F5)" onClick={app.refresh} />
+          <PathBar app={app} tab={tab} className="flex-1 mx-1.5" />
+          <FilterBox ref={filterRef} value={tab.filter} onChange={v => app.updateTab(tab.id, () => ({ filter: v }))} onEnter={v => app.startSearch(tab, v)} className="w-64" placeholder={`Filter ${baseName(tab.path)}`} />
+        </div>
+        {/* command bar */}
+        <div className="h-10 flex items-center gap-0.5 px-2 bg-panel border-b border-line shrink-0 overflow-hidden">
+          <CmdBtn icon="plus" label="New" caret onClick={e => app.openMenuAt(e.currentTarget, app.folderMenu(tab).slice(0, 2))} />
+          <Sep />
+          <CmdBtn icon="upload" label="Upload" onClick={() => app.pickUpload(tab)} />
+          <CmdBtn icon="download" label="Download" disabled={!sel.length} onClick={() => app.download(tab, sel)} />
+          <Sep />
+          <CmdBtn icon="pencil" title="Rename (F2)" disabled={sel.length !== 1} onClick={() => app.act('rename', sel)} />
+          <CmdBtn icon="copy" title="Copy path (Ctrl+Shift+C)" disabled={!sel.length} onClick={() => app.copy(sel.map(e => joinPath(tab.path, e.name)).join('\n'))} />
+          <CmdBtn icon="lock" title="Permissions" disabled={!sel.length} onClick={() => app.act('perms', sel)} />
+          <CmdBtn icon="trash" title="Delete (Del)" disabled={!sel.length} onClick={() => app.act('delete', sel)} />
+          <div className="flex-1" />
+          <CmdBtn icon="terminal" label="Open terminal here" onClick={() => app.openTerminal(tab)} />
+          <CmdBtn icon="play" label="Run command" onClick={() => app.setUi({ run: true })} />
+          <Sep />
+          <CmdBtn icon={app.hidden ? 'eye' : 'eyeOff'} title="Show hidden files" active={app.hidden} onClick={app.toggleHidden} />
+          <CmdBtn icon="panelRight" title="Details pane" active={pane} onClick={() => setPane(p => !p)} />
+        </div>
+        <div className="flex-1 flex min-h-0">
+          {/* Host sidebar */}
+          <aside className="w-60 shrink-0 bg-side border-r border-line flex flex-col min-h-0">
+            <div className="p-2 pb-0"><QuickConnectInput app={app} /></div>
+            <div className="flex-1 overflow-auto px-1.5 pb-3">
+              <SectionLabel>Hosts</SectionLabel>
+              {HOSTS.map(h => {
+                const cur = h.alias === tab.host, bms = app.bookmarks[h.alias] || [], st = app.conn[h.alias];
+                return (
+                  <div key={h.alias}>
+                    <button onClick={e => app.openHost(h.alias, { newTab: e.ctrlKey })} title="Click: switch to its Tab, or open one · Ctrl+click: always a new Tab"
+                      onContextMenu={e => { e.preventDefault(); app.openMenu({ x: e.clientX, y: e.clientY }, [{ label: 'Open in new Tab', icon: 'plus', onClick: () => app.openHost(h.alias, { newTab: true }) }, st === 'connected' ? { label: 'Disconnect', icon: 'x', onClick: () => app.disconnect(h.alias) } : { label: 'Connect', icon: 'zap', onClick: () => app.connect(h.alias) }, { label: 'Copy ssh command', icon: 'copy', onClick: () => app.copy(`ssh ${h.alias}`) }]); }}
+                      className={`w-full flex items-center gap-2 px-2 h-9 rounded-md text-left ${cur ? 'bg-panel shadow-sm' : 'hover:bg-hover'}`}>
+                      <Icon name="server" size={15} className={cur ? 'text-accent' : 'text-muted'} />
+                      <div className="min-w-0 flex-1 leading-tight"><div className={`truncate ${cur ? 'font-semibold' : ''}`}>{h.alias}</div><div className="truncate text-[11px] text-muted">{h.user}@{h.hostname}</div></div>
+                      <Dot state={st} />
+                    </button>
+                    {(cur || st === 'connected') && bms.map(p => (
+                      <button key={p} onClick={() => app.openHost(h.alias, { path: p })} title={`${h.alias}:${p}`}
+                        className={`w-full flex items-center gap-2 pl-7 pr-2 h-7 rounded-md text-left text-[12.5px] ${cur && tab.path === p ? 'bg-sel' : 'hover:bg-hover'}`}>
+                        <Icon name="star" size={12} className="text-muted" /><span className="truncate">{bmLabel(p, bms)}</span>
+                        {p === BIG_DIR && <span className="ml-auto text-[10px] text-muted">100k</span>}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+              {quickTabs.length > 0 && <>
+                <SectionLabel>Quick Connect · not saved</SectionLabel>
+                {quickTabs.map(a => <button key={a} onClick={() => app.openHost(a)} className={`w-full flex items-center gap-2 px-2 h-8 rounded-md text-left ${a === tab.host ? 'bg-panel shadow-sm' : 'hover:bg-hover'}`}><Icon name="zap" size={14} className="text-muted" /><span className="truncate flex-1">{a}</span><Dot state={app.conn[a]} /></button>)}
+              </>}
+              <SectionLabel>Recent</SectionLabel>
+              {app.recent.slice(1, 6).map(r => (
+                <button key={r.host + r.path} onClick={() => app.openHost(r.host, { path: r.path })} className="w-full flex items-center gap-2 px-2 h-7 rounded-md text-left hover:bg-hover text-[12.5px]">
+                  <Icon name="history" size={13} className="text-muted" /><span className="truncate">{baseName(r.path)}</span><span className="truncate text-[11px] text-muted">{r.host}</span>
+                </button>
+              ))}
+            </div>
+            <div className="p-2 border-t border-line">
+              <button onClick={() => app.toggleBookmark(tab.host, tab.path)} className="w-full h-8 rounded-md hover:bg-hover flex items-center gap-2 px-2 text-[12.5px]">
+                <Icon name="star" size={14} fill={app.isBookmarked(tab.host, tab.path)} className={app.isBookmarked(tab.host, tab.path) ? 'text-accent' : 'text-muted'} />
+                {app.isBookmarked(tab.host, tab.path) ? 'Remove bookmark' : 'Bookmark this folder'}
+              </button>
+            </div>
+          </aside>
+          <main className="flex-1 flex flex-col min-w-0 bg-panel">
+            <ConnGate app={app} tab={tab}>{tab.search ? <SearchResults app={app} tab={tab} /> : <FileList app={app} tab={tab} tv={tv} />}</ConnGate>
+          </main>
+          {pane && <aside className="w-80 shrink-0 border-l border-line bg-panel flex flex-col min-h-0"><Inspector app={app} tab={tab} tv={tv} /></aside>}
+        </div>
+        {/* transfer dock */}
+        <div className="bg-panel border-t border-line shrink-0">
+          <div className="h-8 flex items-center gap-3 px-3 text-[12px] select-none" onClick={() => setDock(o => !o)}>
+            <Icon name="transfers" size={15} className="text-muted" /><span className="font-medium">Transfers</span>
+            {sum.running ? <><span className="text-muted">{sum.active} active, {sum.queued} queued</span><Progress pct={sum.pct} className="w-40" /><span className="text-muted tabular-nums">{fmtSpeed(sum.speed)} · {fmtEta(sum.eta)} left</span></> : <span className="text-muted">Idle</span>}
+            {sum.failed > 0 && <span className="text-bad">{sum.failed} failed</span>}
+            <div className="flex-1" />
+            <button onClick={e => { e.stopPropagation(); app.clearFinished(); }} className="h-6 px-2 rounded hover:bg-hover text-muted">Clear finished</button>
+            <Icon name={dock ? 'chevronDown' : 'chevronUp'} size={14} className="text-muted" />
+          </div>
+          {dock && <div className="h-36 overflow-auto border-t border-line">{app.transfers.map(t => <TransferRow key={t.id} app={app} t={t} />)}{!app.transfers.length && <div className="text-muted text-center py-6">No transfers. Drag files in from Explorer to upload.</div>}</div>}
+        </div>
+      </>}
+      {/* status bar */}
+      <div className="h-6 flex items-center gap-4 px-3 text-[11.5px] text-muted bg-side border-t border-line shrink-0">
+        {tab.host && <span>{tv.view.length.toLocaleString()} items</span>}
+        {sel.length > 0 && <span>{sel.length.toLocaleString()} selected · {fmtSize(sumSize(sel))}</span>}
+        <div className="flex-1" />
+        {tab.host && <span className="flex items-center gap-1.5"><Dot state={app.conn[tab.host]} />{hostOf(tab.host).user}@{hostOf(tab.host).hostname}:{hostOf(tab.host).port} · SFTP</span>}
+      </div>
+      {app.ui.run && tab.host && (
+        <div className="fixed inset-0 z-40 bg-black/40 grid place-items-center" onMouseDown={e => e.target === e.currentTarget && app.setUi({ run: false })}>
+          <div className="w-[760px] h-[480px] max-w-[92vw] rounded-xl bg-panel border border-line shadow-2xl overflow-hidden rise"><CommandRunner app={app} tab={tab} onClose={() => app.setUi({ run: false })} /></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===================================================================== VARIANT B · Workbench */
+function fuzzy(s, q) {
+  if (!q) return true;
+  s = s.toLowerCase(); q = q.toLowerCase();
+  if (s.includes(q)) return true;
+  let j = 0; for (const c of s) if (c === q[j]) j++;
+  return j === q.length;
+}
+function Palette({ app, tab, tv, init, onClose, ui }) {
+  const [q, setQ] = useState(init.q || '');
+  const [mode, setMode] = useState(init.mode || 'all');
+  const [i, setI] = useState(0);
+  const inp = useRef(null), list = useRef(null);
+  useEffect(() => { inp.current && inp.current.focus(); }, [mode]);
+  const items = useMemo(() => {
+    if (mode !== 'all') return [];
+    const L = [], sel = tv.selected;
+    const cmds = [
+      { label: 'Run command…', icon: 'play', hint: `on ${tab.host} in ${tab.path}`, keep: true, run: () => { setMode('run'); setQ(''); } },
+      { label: 'Open terminal here', icon: 'terminal', hint: 'Windows Terminal + ssh', run: () => app.openTerminal(tab) },
+      { label: 'Go to folder…', icon: 'folder', hint: 'Ctrl+L', keep: true, run: () => { setMode('goto'); setQ(tab.path === '/' ? '/' : tab.path + '/'); } },
+      { label: 'Search subfolders…', icon: 'search', hint: 'find on the server', run: () => ui.showSearch() },
+      sel.length && { label: `Download ${sel.length === 1 ? sel[0].name : sel.length + ' items'}`, icon: 'download', run: () => app.download(tab, sel) },
+      { label: 'Upload files…', icon: 'upload', run: () => app.pickUpload(tab) },
+      { label: 'New folder', icon: 'folder', run: () => app.act('newfolder') },
+      { label: app.isBookmarked(tab.host, tab.path) ? 'Remove bookmark' : 'Bookmark this folder', icon: 'star', run: () => app.toggleBookmark(tab.host, tab.path) },
+      { label: `${app.hidden ? 'Hide' : 'Show'} hidden files`, icon: 'eye', run: app.toggleHidden },
+      { label: 'Toggle preview', icon: 'panelRight', hint: 'Ctrl+\\', run: ui.toggleSplit },
+      { label: 'Toggle bottom panel', icon: 'panelBottom', hint: 'Ctrl+J', run: ui.togglePanel },
+      { label: 'New Tab', icon: 'plus', run: () => app.newTab() },
+      { label: 'Close Tab', icon: 'x', run: () => app.closeTab(tab.id) },
+      { label: `Disconnect ${tab.host}`, icon: 'x', run: () => app.disconnect(tab.host) },
+    ].filter(Boolean);
+    const qq = q.startsWith('>') ? q.slice(1).trim() : q;
+    if (parseQuick(q)) L.push({ group: 'Quick Connect', icon: 'zap', label: `Connect to ${q.trim()}`, hint: 'not saved', run: () => app.quickConnect(q.trim()) });
+    if (q.startsWith('>')) cmds.forEach(c => fuzzy(c.label, qq) && L.push({ group: 'Commands', ...c }));
+    else {
+      HOSTS.forEach(h => fuzzy(h.alias + ' ' + h.hostname, qq) && L.push({ group: 'Hosts', icon: 'server', label: h.alias, hint: `${h.user}@${h.hostname}`, dot: app.conn[h.alias], run: () => app.openHost(h.alias) }));
+      Object.entries(app.bookmarks).forEach(([h, ps]) => ps.forEach(p => fuzzy(h + ' ' + p, qq) && L.push({ group: 'Bookmarks', icon: 'star', label: baseName(p), hint: `${h}:${p}`, run: () => app.openHost(h, { path: p }) })));
+      if (qq) tv.view.slice(0, 2000).filter(e => fuzzy(e.name, qq)).slice(0, 30).forEach(e => L.push({ group: `In ${baseName(tab.path)}`, icon: isDirish(e) ? 'folder' : fileIconName(e.name), label: e.name, hint: isDirish(e) ? 'open' : 'select', run: () => (isDirish(e) ? app.navigate(joinPath(tab.path, e.name)) : app.navigate(tab.path, tab.id, e.name)) }));
+      cmds.forEach(c => fuzzy(c.label, qq) && L.push({ group: 'Commands', ...c }));
+    }
+    // substring matches rank above loose subsequence matches, within each group
+    const groups = [...new Set(L.map(x => x.group))];
+    const rank = (it) => (!qq || (it.label + ' ' + (it.hint || '')).toLowerCase().includes(qq.toLowerCase()) ? 0 : 1);
+    L.sort((a, b) => groups.indexOf(a.group) - groups.indexOf(b.group) || rank(a) - rank(b));
+    return L.slice(0, 80);
+  }, [q, mode, tab, tv.view, app.bookmarks, app.conn, app.hidden]);
+  useEffect(() => setI(0), [q, mode]);
+  useEffect(() => { const el = list.current && list.current.querySelector('[data-on="1"]'); el && el.scrollIntoView({ block: 'nearest' }); }, [i]);
+  const fire = (it) => { if (!it) return; it.run(); if (!it.keep) onClose(); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { if (mode !== 'all') { setMode('all'); setQ(''); } else onClose(); return; }
+    if (mode === 'run' && e.key === 'Enter' && q.trim()) { app.runCommand(tab, q.trim()); ui.showOutput(); onClose(); return; }
+    if (mode === 'goto' && e.key === 'Enter') { const p = resolvePath(q, tab.path, hostOf(tab.host).home); if (p) { app.navigate(p); onClose(); } return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setI(x => Math.min(items.length - 1, x + 1)); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setI(x => Math.max(0, x - 1)); }
+    if (e.key === 'Enter') fire(items[i]);
+  };
+  let lastGroup = null;
+  return (
+    <div className="fixed inset-0 z-40 bg-black/25 flex justify-center pt-[9vh]" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-[600px] max-w-[92vw] self-start rounded-xl bg-panel border border-line shadow-2xl overflow-hidden rise">
+        <div className="flex items-center gap-2 px-4 h-12 border-b border-line">
+          {mode === 'all' ? <Icon name="search" size={16} className="text-muted" /> : <span className="shrink-0 px-2 h-6 rounded bg-chip text-[11.5px] flex items-center gap-1.5"><Icon name={mode === 'run' ? 'play' : 'folder'} size={12} />{mode === 'run' ? `Run on ${tab.host} in ${tab.path}` : 'Go to folder'}</span>}
+          <input ref={inp} value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKey}
+            placeholder={mode === 'run' ? 'Command, e.g. df -h' : mode === 'goto' ? '/path, ~/path or folder name' : 'Hosts, bookmarks, files here, or > for commands. Type user@host to Quick Connect'}
+            className={`flex-1 bg-transparent outline-none text-[14px] min-w-0 ${mode !== 'all' ? 'font-mono' : ''}`} />
+        </div>
+        {mode === 'all' ? (
+          <div ref={list} className="max-h-[400px] overflow-auto py-1">
+            {items.map((it, k) => {
+              const head = it.group !== lastGroup; lastGroup = it.group;
+              return (
+                <Fragment key={k}>
+                  {head && <div className="px-4 pt-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-muted">{it.group}</div>}
+                  <div data-on={k === i ? '1' : '0'} onMouseMove={() => setI(k)} onClick={() => fire(it)}
+                    className={`mx-1.5 px-3 h-8 rounded-md flex items-center gap-2.5 cursor-default ${k === i ? 'bg-sel' : ''}`}>
+                    <Icon name={it.icon} size={15} className="text-muted" />
+                    <span className="truncate">{it.label}</span>
+                    {it.dot && <Dot state={it.dot} />}
+                    <span className="ml-auto text-muted text-[11.5px] truncate max-w-[50%]">{it.hint}</span>
+                  </div>
+                </Fragment>
+              );
+            })}
+            {!items.length && <div className="text-muted px-4 py-6 text-center">Nothing matches.</div>}
+          </div>
+        ) : (
+          <div className="px-4 py-3 text-[12px] text-muted">{mode === 'run' ? 'Enter runs it, and its output appears in the Output panel. Esc goes back.' : 'Enter goes there. Esc goes back.'}</div>
+        )}
+        <div className="h-8 px-4 flex items-center gap-4 border-t border-line text-[11px] text-muted bg-side">
+          <span>↑↓ move</span><span>Enter run</span><span>Esc close</span><span className="ml-auto">&gt; commands only</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+function VariantB({ app }) {
+  const tab = app.active, tv = useTabView(app, tab);
+  const [act, setAct] = useState('hosts');
+  const [side, setSide] = useState(true);
+  const [split, setSplit] = useState(true);
+  const [panel, setPanel] = useState('transfers');
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [palette, setPalette] = useState(null);
+  const [find, setFind] = useState('');
+  const filterRef = useRef(null), findRef = useRef(null), logEnd = useRef(null);
+  const sum = transferSummary(app.transfers);
+  const ui = {
+    toggleSplit: () => setSplit(s => !s), togglePanel: () => setPanelOpen(o => !o),
+    showOutput: () => { setPanel('output'); setPanelOpen(true); },
+    showSearch: () => { setAct('search'); setSide(true); setTimeout(() => findRef.current && findRef.current.focus(), 50); },
+  };
+  useEffect(() => { if (app.ui.run) { ui.showOutput(); app.setUi({ run: false }); } }, [app.ui.run]);
+  useEffect(() => { logEnd.current && logEnd.current.scrollIntoView({ block: 'end' }); }, [app.log.length, panel]);
+  useEvent('focus-filter', () => filterRef.current && filterRef.current.focus());
+  useEvent('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (e.ctrlKey && (k === 'k' || k === 'p')) { e.preventDefault(); setPalette({ mode: 'all', q: e.shiftKey ? '>' : '' }); }
+    else if (e.ctrlKey && k === 'j') { e.preventDefault(); setPanelOpen(o => !o); }
+    else if (e.ctrlKey && k === 'b') { e.preventDefault(); setSide(s => !s); }
+    else if (e.ctrlKey && k === '\\') { e.preventDefault(); setSplit(s => !s); }
+  });
+  const activity = (key, icon, title, badge) => (
+    <button title={title} onClick={() => { if (act === key && side) setSide(false); else if (key === 'search') ui.showSearch(); else { setAct(key); setSide(true); } }}
+      className={`relative w-12 h-12 grid place-items-center ${act === key && side ? 'text-fg' : 'text-muted hover:text-fg'}`}>
+      {act === key && side && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-r" />}
+      <Icon name={icon} size={21} sw={1.6} />
+      {badge > 0 && <span className="absolute top-2 right-2 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[10px] grid place-items-center">{badge}</span>}
+    </button>
+  );
+  const sel = tv.selected;
+  return (
+    <div className="h-full flex flex-col bg-bg">
+      {/* title bar with the command palette trigger */}
+      <div className="h-9 flex items-center bg-side border-b border-line pl-3 shrink-0 select-none">
+        <Logo size={16} /><span className="ml-2 text-[12px] text-muted">sftp</span>
+        <div className="flex-1 flex justify-center">
+          <button onClick={() => setPalette({ mode: 'all' })} className="w-[440px] max-w-[50vw] h-6 rounded-md bg-panel border border-line flex items-center gap-2 px-2.5 text-[12px] text-muted hover:border-accent">
+            <Icon name="search" size={13} /><span className="truncate">Hosts, folders and commands</span><span className="ml-auto text-[10.5px] border border-line rounded px-1">Ctrl K</span>
+          </button>
+        </div>
+        <WinControls />
+      </div>
+      <div className="flex-1 flex min-h-0">
+        {/* activity bar */}
+        <div className="w-12 shrink-0 bg-side border-r border-line flex flex-col">
+          {activity('hosts', 'server', 'Hosts (Ctrl+B toggles the sidebar)')}
+          {activity('bookmarks', 'star', 'Bookmarks')}
+          {activity('search', 'search', 'Search subfolders on the server')}
+          {activity('transfers', 'transfers', 'Transfers', sum.active + sum.queued)}
+          <div className="flex-1" />
+          <button title="Settings (not yet specified)" onClick={() => app.toast('Settings are still in the fog on the map', { icon: 'settings' })} className="w-12 h-12 grid place-items-center text-muted hover:text-fg"><Icon name="settings" size={20} sw={1.6} /></button>
+        </div>
+        {/* side panel */}
+        {side && (
+          <div className="w-64 shrink-0 bg-side border-r border-line flex flex-col min-h-0">
+            <div className="h-9 flex items-center px-4 text-[11px] font-semibold uppercase tracking-wide text-muted shrink-0">
+              {{ hosts: 'Hosts', bookmarks: 'Bookmarks', search: 'Search', transfers: 'Transfers' }[act]}
+              <div className="flex-1" />
+              {act === 'hosts' && <button title="Quick Connect" onClick={() => setPalette({ mode: 'all', q: '' })} className="h-6 w-6 grid place-items-center rounded hover:bg-hover normal-case"><Icon name="zap" size={14} /></button>}
+              {act === 'transfers' && <button onClick={app.clearFinished} className="normal-case font-normal hover:text-fg">Clear finished</button>}
+            </div>
+            <div className="flex-1 overflow-auto min-h-0">
+              {act === 'hosts' && (
+                <div className="px-1.5">
+                  {[...HOSTS, ...[...new Set(app.tabs.filter(t => t.host && hostOf(t.host).quick).map(t => t.host))].map(hostOf)].map(h => {
+                    const ts = app.tabs.filter(t => t.host === h.alias);
+                    return (
+                      <div key={h.alias} className="mb-1">
+                        <button onClick={e => app.openHost(h.alias, { newTab: e.ctrlKey })} className={`w-full flex items-center gap-2 px-2 h-8 rounded text-left ${h.alias === tab.host ? 'bg-hover' : 'hover:bg-hover'}`}>
+                          <Icon name={h.quick ? 'zap' : 'server'} size={14} className="text-muted" />
+                          <span className="truncate font-medium">{h.alias}</span>
+                          <span className="truncate text-[11px] text-muted">{h.quick ? 'not saved' : h.hostname}</span>
+                          <span className="ml-auto"><Dot state={app.conn[h.alias]} /></span>
+                        </button>
+                        {ts.map(t => (
+                          <button key={t.id} onClick={() => app.setActiveId(t.id)} className={`w-full flex items-center gap-2 pl-8 pr-2 h-6 rounded text-left text-[12px] ${t.id === tab.id ? 'bg-sel' : 'hover:bg-hover text-muted'}`}>
+                            <Icon name="folder" size={12} /><span className="truncate">{t.path}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  <div className="px-2 pt-3 text-[11px] text-muted leading-relaxed">Indented rows are open Tabs. Ctrl+K, then type <span className="font-mono">user@host</span> to Quick Connect.</div>
+                </div>
+              )}
+              {act === 'bookmarks' && (
+                <div className="px-1.5">
+                  {Object.entries(app.bookmarks).map(([h, ps]) => ps.length > 0 && (
+                    <div key={h} className="mb-2">
+                      <div className="px-2 h-6 flex items-center gap-1.5 text-[11.5px] text-muted"><Dot state={app.conn[h]} />{h}</div>
+                      {ps.map(p => <button key={p} onClick={() => app.openHost(h, { path: p })} className={`w-full flex items-center gap-2 pl-6 pr-2 h-7 rounded text-left text-[12.5px] ${tab.host === h && tab.path === p ? 'bg-sel' : 'hover:bg-hover'}`}><Icon name="star" size={12} className="text-muted" /><span className="truncate">{baseName(p)}</span><span className="truncate text-[11px] text-muted">{parentPath(p)}</span></button>)}
+                    </div>
+                  ))}
+                  <button onClick={() => app.toggleBookmark(tab.host, tab.path)} className="mx-2 mt-1 h-7 px-2 rounded border border-dashed border-line text-[12px] text-muted hover:text-fg w-[calc(100%-16px)]">{app.isBookmarked(tab.host, tab.path) ? 'Remove' : 'Bookmark'} {baseName(tab.path)}</button>
+                </div>
+              )}
+              {act === 'search' && (
+                <div className="flex flex-col h-full">
+                  <div className="px-3 pb-2">
+                    <FilterBox ref={findRef} value={find} onChange={setFind} onEnter={v => app.startSearch(tab, v)} hint={false} placeholder="Name or pattern, e.g. *.log" />
+                    <div className="text-[11px] text-muted mt-1.5">Runs <span className="font-mono">find</span> on {tab.host} under {tab.path}</div>
+                  </div>
+                  {tab.search && <SearchResults app={app} tab={tab} compact />}
+                </div>
+              )}
+              {act === 'transfers' && <div>{app.transfers.map(t => <TransferRow key={t.id} app={app} t={t} layout="stack" />)}</div>}
+            </div>
+          </div>
+        )}
+        {/* editor area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="h-9 flex items-stretch bg-side border-b border-line overflow-x-auto shrink-0 select-none">
+            {app.tabs.map(t => {
+              const on = t.id === tab.id;
+              return (
+                <div key={t.id} onMouseDown={e => { if (e.button === 1) { e.preventDefault(); app.closeTab(t.id); } else app.setActiveId(t.id); }}
+                  className={`group flex items-center gap-2 pl-3 pr-1.5 border-r border-line text-[12px] shrink-0 border-t-2 ${on ? 'bg-panel border-t-accent' : 'border-t-transparent text-muted hover:bg-hover'}`}>
+                  <Icon name="folder" size={13} fill className={on ? 'text-accent' : ''} />
+                  <span>{t.host ? baseName(t.path) : 'New Tab'}</span>
+                  {t.host && <span className="text-[11px] text-muted">{t.host}</span>}
+                  <button onMouseDown={e => { e.stopPropagation(); app.closeTab(t.id); }} className={`h-5 w-5 grid place-items-center rounded hover:bg-hover ${on ? '' : 'opacity-0 group-hover:opacity-100'}`}><Icon name="x" size={12} /></button>
+                </div>
+              );
+            })}
+            <button onClick={() => app.newTab()} className="w-9 grid place-items-center text-muted hover:text-fg shrink-0"><Icon name="plus" size={15} /></button>
+          </div>
+          {tab.host == null ? <Launcher app={app} /> : <>
+            <div className="h-9 flex items-center gap-0.5 px-1.5 bg-panel border-b border-line shrink-0">
+              <IconBtn icon="arrowLeft" title="Back" size={15} disabled={!tab.back.length} onClick={app.goBack} className="h-7 w-7" />
+              <IconBtn icon="arrowRight" title="Forward" size={15} disabled={!tab.fwd.length} onClick={app.goForward} className="h-7 w-7" />
+              <IconBtn icon="arrowUp" title="Up" size={15} disabled={tab.path === '/'} onClick={app.goUp} className="h-7 w-7" />
+              <PathBar app={app} tab={tab} variant="flat" className="flex-1 mx-1" />
+              <FilterBox ref={filterRef} value={tab.filter} onChange={v => app.updateTab(tab.id, () => ({ filter: v }))} hint={false} className="w-48 !h-7" placeholder="Filter" />
+              <IconBtn icon={app.hidden ? 'eye' : 'eyeOff'} title="Show hidden files" active={app.hidden} size={15} onClick={app.toggleHidden} className="h-7 w-7" />
+              <IconBtn icon="panelRight" title="Preview (Ctrl+\)" active={split} size={15} onClick={() => setSplit(s => !s)} className="h-7 w-7" />
+              <IconBtn icon="more" title="More" size={15} onClick={e => app.openMenuAt(e.currentTarget, app.folderMenu(tab))} className="h-7 w-7" />
+            </div>
+            <div className="flex-1 flex min-h-0 bg-panel">
+              <div className="flex-1 flex flex-col min-w-0"><ConnGate app={app} tab={tab}><FileList app={app} tab={tab} tv={tv} /></ConnGate></div>
+              {split && <div className="w-[36%] max-w-[480px] min-w-[260px] border-l border-line flex flex-col min-h-0"><Inspector app={app} tab={tab} tv={tv} /></div>}
+            </div>
+          </>}
+          {/* bottom panel */}
+          {panelOpen && (
+            <div className="h-56 shrink-0 border-t border-line bg-panel flex flex-col min-h-0">
+              <div className="h-8 flex items-center gap-4 px-3 text-[11px] uppercase tracking-wide shrink-0">
+                {[['transfers', `Transfers${sum.active + sum.queued ? ` (${sum.active + sum.queued})` : ''}`], ['output', 'Output'], ['log', 'Log']].map(([k, l]) => (
+                  <button key={k} onClick={() => setPanel(k)} className={`h-full border-b-2 ${panel === k ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg'}`}>{l}</button>
+                ))}
+                <div className="flex-1" />
+                {panel === 'transfers' && <button onClick={app.clearFinished} className="normal-case text-muted hover:text-fg">Clear finished</button>}
+                {panel === 'output' && <button onClick={app.clearCmdLog} className="normal-case text-muted hover:text-fg">Clear</button>}
+                <IconBtn icon="x" title="Close panel (Ctrl+J)" size={14} onClick={() => setPanelOpen(false)} className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-h-0 overflow-auto">
+                {panel === 'transfers' && app.transfers.map(t => <TransferRow key={t.id} app={app} t={t} />)}
+                {panel === 'output' && tab.host && <CommandRunner key={tab.id} app={app} tab={tab} header={false} />}
+                {panel === 'log' && (
+                  <div className="font-mono text-[11.5px] leading-5 px-3 py-1">
+                    {app.log.map(l => <div key={l.id} className={l.level === 'warn' ? 'text-warn' : ''}><span className="text-muted">{l.t}</span> <span className="text-accent">{l.host}</span> {l.msg}</div>)}
+                    <div ref={logEnd} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* status bar */}
+      <div className="h-6 flex items-center gap-4 px-3 text-[11.5px] bg-accent text-white shrink-0 select-none">
+        {tab.host && <span className="flex items-center gap-1.5"><Icon name={hostOf(tab.host).quick ? 'zap' : 'server'} size={12} />{tab.host}</span>}
+        {tab.host && <span className="opacity-85">{hostOf(tab.host).user}@{hostOf(tab.host).hostname}:{hostOf(tab.host).port} · {app.conn[tab.host] === 'connected' ? 'connected' : app.conn[tab.host] || 'not connected'}</span>}
+        <div className="flex-1" />
+        {tab.host && <span className="opacity-85">{tv.view.length.toLocaleString()} items{sel.length ? `, ${sel.length.toLocaleString()} selected (${fmtSize(sumSize(sel))})` : ''}</span>}
+        <button onClick={() => { setPanel('transfers'); setPanelOpen(true); }} className="flex items-center gap-1.5 hover:bg-white/15 px-1.5 rounded">
+          <Icon name="transfers" size={12} />{sum.running ? `${sum.active} active · ${fmtSpeed(sum.speed)} · ${fmtEta(sum.eta)}` : 'Transfers idle'}{sum.failed ? ` · ${sum.failed} failed` : ''}
+        </button>
+        <button onClick={() => { setPanel('output'); setPanelOpen(true); }} className="flex items-center gap-1 hover:bg-white/15 px-1.5 rounded"><Icon name="play" size={11} />Run</button>
+        <button onClick={() => tab.host && app.openTerminal(tab)} className="flex items-center gap-1 hover:bg-white/15 px-1.5 rounded"><Icon name="terminal" size={12} />Terminal</button>
+      </div>
+      {palette && <Palette app={app} tab={tab} tv={tv} init={palette} ui={ui} onClose={() => setPalette(null)} />}
+    </div>
+  );
+}
+
+/* ===================================================================== VARIANT C · Focus */
+function TransfersButton({ app }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useOutside(ref, open, () => setOpen(false));
+  const s = transferSummary(app.transfers);
+  const r = 9, c = 2 * Math.PI * r;
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(o => !o)} title="Transfers" className={`relative h-8 px-2 rounded-full flex items-center gap-1.5 hover:bg-hover ${open ? 'bg-hover' : ''}`}>
+        <svg width="22" height="22" viewBox="0 0 22 22" className="-rotate-90">
+          <circle cx="11" cy="11" r={r} fill="none" stroke="var(--chip)" strokeWidth="2.5" />
+          {s.running && <circle cx="11" cy="11" r={r} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - s.pct / 100)} style={{ transition: 'stroke-dashoffset .3s linear' }} />}
+        </svg>
+        <Icon name="transfers" size={11} className="absolute left-[13.5px] text-muted" />
+        {s.running && <span className="text-[11.5px] tabular-nums text-muted">{fmtEta(s.eta)}</span>}
+        {s.failed > 0 && <span className="w-1.5 h-1.5 rounded-full bg-bad" />}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-10 z-30 w-[420px] rounded-xl bg-panel border border-line shadow-2xl overflow-hidden rise">
+          <div className="px-4 py-3 border-b border-line flex items-center gap-2">
+            <div className="font-semibold">Transfers</div>
+            <div className="text-muted text-[12px]">{s.running ? `${s.active} active, ${s.queued} queued · ${fmtSpeed(s.speed)}` : 'All done'}</div>
+            <div className="flex-1" />
+            <button onClick={app.clearFinished} className="text-[12px] text-muted hover:text-fg">Clear finished</button>
+          </div>
+          <div className="max-h-[380px] overflow-auto">{app.transfers.map(t => <TransferRow key={t.id} app={app} t={t} layout="stack" />)}{!app.transfers.length && <div className="text-muted text-center py-8">Nothing transferring.</div>}</div>
+          <div className="px-4 py-2 border-t border-line text-[11px] text-muted bg-side">Downloads go to {LOCAL_DOWNLOADS} · up to 3 at once</div>
+        </div>
+      )}
+    </div>
+  );
+}
+function VariantC({ app }) {
+  const tab = app.active, tv = useTabView(app, tab);
+  const filterRef = useRef(null);
+  useEvent('focus-filter', () => filterRef.current && filterRef.current.focus());
+  const sel = tv.selected;
+  const bms = tab.host ? app.bookmarks[tab.host] || [] : [];
+  const starred = tab.host && app.isBookmarked(tab.host, tab.path);
+  return (
+    <div className="h-full flex flex-col bg-bg">
+      <div className="h-12 flex items-center gap-1 pl-4 shrink-0 select-none">
+        <Logo size={20} />
+        <div className="flex items-center gap-1 ml-3 min-w-0 overflow-hidden">
+          {app.tabs.map(t => {
+            const on = t.id === tab.id;
+            return (
+              <div key={t.id} onMouseDown={e => { if (e.button === 1) { e.preventDefault(); app.closeTab(t.id); } else app.setActiveId(t.id); }}
+                className={`group h-8 flex items-center gap-2 pl-3 pr-1 rounded-full text-[12.5px] shrink min-w-[90px] max-w-[220px] ${on ? 'bg-panel border border-line shadow-sm' : 'text-muted hover:bg-hover border border-transparent'}`}>
+                {t.host ? <Dot state={app.conn[t.host]} /> : <Icon name="plus" size={12} />}
+                <span className="truncate">{t.host ? `${t.host} · ${baseName(t.path)}` : 'New Tab'}</span>
+                <button onMouseDown={e => { e.stopPropagation(); app.closeTab(t.id); }} className={`h-6 w-6 shrink-0 grid place-items-center rounded-full hover:bg-hover ${on ? '' : 'opacity-0 group-hover:opacity-100'}`}><Icon name="x" size={12} /></button>
+              </div>
+            );
+          })}
+          <button onClick={() => app.newTab({ launcher: true })} title="New Tab: pick a Host" className="h-8 w-8 shrink-0 grid place-items-center rounded-full hover:bg-hover text-muted"><Icon name="plus" size={16} /></button>
+        </div>
+        <div className="flex-1 self-stretch" />
+        <TransfersButton app={app} />
+        <div className="w-2" />
+        <WinControls />
+      </div>
+      {tab.host == null ? <Launcher app={app} /> : <>
+        <div className="px-6 pt-2 pb-3 shrink-0">
+          <div className="flex items-center gap-1">
+            <IconBtn icon="arrowLeft" title="Back (Alt+Left)" disabled={!tab.back.length} onClick={app.goBack} />
+            <IconBtn icon="arrowRight" title="Forward (Alt+Right)" disabled={!tab.fwd.length} onClick={app.goForward} />
+            <IconBtn icon="arrowUp" title="Up (Alt+Up)" disabled={tab.path === '/'} onClick={app.goUp} />
+            <PathBar app={app} tab={tab} variant="big" className="flex-1 ml-1" />
+            <IconBtn icon="star" title={starred ? 'Remove bookmark' : 'Bookmark this folder'} onClick={() => app.toggleBookmark(tab.host, tab.path)} className={starred ? 'text-accent' : 'text-muted'} />
+            <FilterBox ref={filterRef} round value={tab.filter} onChange={v => app.updateTab(tab.id, () => ({ filter: v }))} onEnter={v => app.startSearch(tab, v)} className="w-64 ml-1" placeholder="Filter, or Enter to search all" />
+            <button onClick={e => app.openMenuAt(e.currentTarget, app.folderMenu(tab))} title="Folder actions" className="h-8 px-3 ml-1 rounded-full border border-line bg-panel hover:bg-hover flex items-center gap-1.5 text-[12.5px]"><Icon name="more" size={15} />Actions</button>
+          </div>
+          <div className="flex items-center gap-1.5 mt-2.5 pl-1 overflow-x-auto">
+            {bms.map(p => (
+              <button key={p} onClick={() => app.navigate(p)} title={p}
+                className={`h-7 px-2.5 rounded-full text-[12px] flex items-center gap-1.5 shrink-0 ${p === tab.path ? 'bg-accent text-white' : 'bg-chip hover:bg-hover'}`}>
+                <Icon name="star" size={11} fill={p === tab.path} />{bmLabel(p, bms)}{p === BIG_DIR && <span className="opacity-70 text-[10.5px]">100k</span>}
+              </button>
+            ))}
+            {!bms.length && <span className="text-muted text-[12px]">Star a folder to pin it here.</span>}
+          </div>
+        </div>
+        <div className="flex-1 flex min-h-0 px-6 pb-5 gap-4 relative">
+          <div className="flex-1 flex flex-col min-w-0 bg-panel rounded-xl border border-line overflow-hidden shadow-sm">
+            <ConnGate app={app} tab={tab}>{tab.search ? <SearchResults app={app} tab={tab} /> : <FileList app={app} tab={tab} tv={tv} density="comfortable" columns={['name', 'mtime', 'size', 'owner']} rounded />}</ConnGate>
+          </div>
+          {sel.length === 1 && !tab.search && (
+            <div key={sel[0].name} className="w-[340px] shrink-0 bg-panel rounded-xl border border-line flex flex-col min-h-0 shadow-sm overflow-hidden slidein">
+              <div className="h-10 flex items-center px-3 border-b border-line shrink-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">Inspector</span>
+                <div className="flex-1" />
+                <IconBtn icon="x" title="Close (Esc)" size={14} className="h-7 w-7" onClick={() => app.updateTab(tab.id, () => ({ sel: [] }))} />
+              </div>
+              <div className="flex-1 min-h-0 flex flex-col"><Inspector app={app} tab={tab} tv={tv} actions /></div>
+            </div>
+          )}
+          {sel.length > 1 && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 h-11 pl-4 pr-1.5 rounded-full bg-shell text-white shadow-2xl flex items-center gap-1 text-[12.5px] rise">
+              <span className="pr-2 whitespace-nowrap">{sel.length.toLocaleString()} selected · {fmtSize(sumSize(sel))}</span>
+              {[['download', 'Download', () => app.download(tab, sel)], ['copy', 'Copy paths', () => app.copy(sel.map(e => joinPath(tab.path, e.name)).join('\n'))], ['lock', 'Permissions', () => app.act('perms', sel)], ['trash', 'Delete', () => app.act('delete', sel)]].map(([i, l, f]) => (
+                <button key={l} onClick={f} className={`h-8 px-3 rounded-full hover:bg-white/15 flex items-center gap-1.5 whitespace-nowrap ${i === 'trash' ? 'text-[#FF9A8A]' : ''}`}><Icon name={i} size={14} />{l}</button>
+              ))}
+              <button onClick={() => app.updateTab(tab.id, () => ({ sel: [] }))} className="h-8 w-8 rounded-full hover:bg-white/15 grid place-items-center"><Icon name="x" size={14} /></button>
+            </div>
+          )}
+        </div>
+      </>}
+      {app.ui.run && tab.host && (
+        <div className="fixed inset-0 z-40 bg-black/30 flex items-end" onMouseDown={e => e.target === e.currentTarget && app.setUi({ run: false })}>
+          <div className="w-full h-[46%] bg-panel rounded-t-2xl border-t border-line shadow-2xl overflow-hidden rise flex flex-col">
+            <div className="h-1.5 w-12 rounded-full bg-line mx-auto mt-2 shrink-0" />
+            <div className="flex-1 min-h-0"><CommandRunner app={app} tab={tab} onClose={() => app.setUi({ run: false })} /></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===================================================================== root: menu, toasts, variant switcher */
+function MenuHost({ app }) {
+  const m = app.menu, ref = useRef(null);
+  const [pos, setPos] = useState(null);
+  useOutside(ref, !!m, app.closeMenu);
+  useEffect(() => {
+    if (!m) return;
+    const esc = (e) => e.key === 'Escape' && app.closeMenu();
+    window.addEventListener('keydown', esc); window.addEventListener('blur', app.closeMenu);
+    return () => { window.removeEventListener('keydown', esc); window.removeEventListener('blur', app.closeMenu); };
+  }, [m]);
+  useLayoutEffect(() => {
+    if (!m || !ref.current) { setPos(null); return; }
+    const r = ref.current.getBoundingClientRect();
+    setPos({ x: Math.max(8, Math.min(m.x, innerWidth - r.width - 8)), y: Math.max(8, Math.min(m.y, innerHeight - r.height - 8)) });
+  }, [m]);
+  if (!m) return null;
+  return (
+    <div ref={ref} style={{ left: (pos || m).x, top: (pos || m).y, visibility: pos ? 'visible' : 'hidden' }} className="fixed z-50 min-w-[230px] py-1 rounded-lg bg-panel border border-line shadow-xl text-[12.5px]">
+      {m.items.map((it, i) => it.sep
+        ? <div key={i} className="h-px bg-line my-1" />
+        : (
+          <button key={i} onClick={() => { app.closeMenu(); it.onClick && it.onClick(); }}
+            className={`w-full flex items-center gap-2.5 px-3 h-8 text-left hover:bg-hover ${it.danger ? 'text-bad' : ''}`}>
+            <Icon name={it.icon || 'blank'} size={15} className={it.danger ? '' : 'text-muted'} />
+            <span className="flex-1">{it.label}</span>
+            {it.check && <Icon name="check" size={14} className="text-accent" />}
+            {it.kbd && <span className="text-muted text-[11px]">{it.kbd}</span>}
+          </button>
+        ))}
+    </div>
+  );
+}
+function Toasts({ app }) {
+  return (
+    <div className="fixed right-4 bottom-16 z-50 flex flex-col gap-2 w-[400px] max-w-[90vw] pointer-events-none">
+      {app.toasts.map(t => (
+        <div key={t.id} className="pointer-events-auto rounded-lg bg-panel border border-line shadow-xl px-3.5 py-3 text-[12.5px] flex gap-3 rise">
+          <Icon name={t.icon || (t.kind === 'bad' ? 'alert' : 'info')} size={16} className={t.kind === 'bad' ? 'text-bad' : t.kind === 'ok' ? 'text-ok' : 'text-accent'} />
+          <div className="min-w-0">
+            <div className="font-medium">{t.text}</div>
+            {t.sub && <div className="text-muted text-[12px] mt-0.5">{t.sub}</div>}
+            {t.mono && <div className="font-mono text-[11px] text-muted mt-1.5 break-all bg-term rounded px-2 py-1">{t.mono}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+const VARIANTS = [
+  { key: 'A', name: 'Explorer', C: VariantA },
+  { key: 'B', name: 'Workbench', C: VariantB },
+  { key: 'C', name: 'Focus', C: VariantC },
+];
+function Root() {
+  const app = useApp();
+  const appRef = useRef(app); appRef.current = app;
+  const params = new URLSearchParams(location.search);
+  const [v, setV] = useState(() => (VARIANTS.some(x => x.key === params.get('variant')) ? params.get('variant') : 'A'));
+  const [dark, setDark] = useState(() => (params.get('theme') ? params.get('theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches));
+  const setParam = (k, val) => { try { const u = new URL(location.href); u.searchParams.set(k, val); history.replaceState(null, '', u); } catch (e) {} };
+  useEffect(() => { document.documentElement.classList.toggle('dark', dark); setParam('theme', dark ? 'dark' : 'light'); }, [dark]);
+  const go = (key) => { setV(key); setParam('variant', key); };
+  const idx = VARIANTS.findIndex(x => x.key === v), cur = VARIANTS[idx];
+  const step = (d) => go(VARIANTS[(idx + d + VARIANTS.length) % VARIANTS.length].key);
+  useEvent('keydown', (e) => {
+    const a = appRef.current, t = e.target, typing = t.closest && t.closest('input, textarea, [contenteditable="true"]');
+    if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); a.goBack(); }
+    else if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); a.goForward(); }
+    else if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); a.goUp(); }
+    else if (e.ctrlKey && e.key.toLowerCase() === 'l') { e.preventDefault(); window.dispatchEvent(new Event('focus-path')); }
+    else if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); window.dispatchEvent(new Event('focus-filter')); }
+    else if (e.key === 'F5') { e.preventDefault(); a.refresh(); }
+    else if (e.key === 'Escape' && a.ui.run) a.setUi({ run: false });
+    else if (!typing && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && e.key === 'ArrowLeft') step(-1);
+    else if (!typing && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && e.key === 'ArrowRight') step(1);
+  });
+  const V = cur.C;
+  return (
+    <>
+      <V key={v} app={app} />
+      <MenuHost app={app} />
+      <Toasts app={app} />
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-0.5 h-9 px-1 rounded-full bg-[#0B0E10] text-white shadow-2xl ring-2 ring-[#FFC24A]/70 text-[12px] select-none">
+        <button onClick={() => step(-1)} title="Previous variant (←)" className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/15"><Icon name="chevronLeft" size={15} /></button>
+        <span className="px-1.5 text-[9.5px] font-bold tracking-widest text-[#FFC24A]">PROTOTYPE</span>
+        <span className="min-w-[120px] text-center">{cur.key} · {cur.name}</span>
+        <button onClick={() => step(1)} title="Next variant (→)" className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/15"><Icon name="chevronRight" size={15} /></button>
+        <span className="w-px h-4 bg-white/25 mx-1" />
+        <button onClick={() => setDark(d => !d)} title="Light / dark" className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/15"><Icon name={dark ? 'sun' : 'moon'} size={14} /></button>
+      </div>
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+</script>
+</body>
+</html>
