@@ -20,6 +20,10 @@ _Avoid_: Ad hoc connection, temporary site
 A remote file the user has opened in their own editor. While the Edit lasts, every save to its local copy is uploaded back to the Host. Edits belong to the app, not to a Tab.
 _Avoid_: Edit session, checkout, temp file, sync
 
+**Batch**:
+The files moved by one upload, download or drop. Conflicts are answered and failures are summarised per Batch.
+_Avoid_: Job, task, transfer group
+
 **Tab**:
 One browsing view showing a single Host at a current remote folder. Several Tabs may show the same Host.
 _Avoid_: Session, window, pane
