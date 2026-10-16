@@ -6,7 +6,11 @@ A Windows desktop file browser for the user's own servers, reached over SSH. It 
 
 **Host**:
 A server the app can connect to, defined by a `Host` entry in the user's SSH config and named by its alias. The app reads Hosts but never edits the SSH config.
-_Avoid_: Site, server profile, bookmark, connection
+_Avoid_: Site, server profile, connection
+
+**Bookmark**:
+A folder on a Host that the user has saved for quick return, listed under that Host in the sidebar. Bookmarks belong to the app, not the SSH config.
+_Avoid_: Favourite, pinned folder, shortcut
 
 **Quick Connect**:
 Connecting to a server typed as `user@host[:port]` that has no Host entry. Nothing about it is saved.
