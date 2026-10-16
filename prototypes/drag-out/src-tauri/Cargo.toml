@@ -1,0 +1,39 @@
+# PROTOTYPE: drag-out test build. Throwaway, never merged.
+[package]
+name = "drag-out-prototype"
+version = "0.0.0"
+edition = "2024"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+russh = { version = "~0.64", default-features = false, features = ["ring", "flate2", "rsa"] }
+russh-sftp = "3"
+anyhow = "1"
+windows-core = "0.62"
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Com_Marshal",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_DataExchange",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_SystemServices",
+  "Win32_System_Threading",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+# SSH crypto is painfully slow unoptimised; optimise dependencies in dev builds.
+[profile.dev.package."*"]
+opt-level = 2

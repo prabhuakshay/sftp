@@ -1,0 +1,407 @@
+[   1089.4   main] OleInitialize on main thread: ok
+[ 200468.5 t20940] connected in 666 ms, home /home/akshay
+[ 200477.9 t20940] listed /home/akshay/dragtest: 6 entries, 1 READDIR calls, 4 ms
+[ 227763.0 t26012] start_drag: 1 selected
+[ 227764.3 t20940] pre-drag listing: 1 entries (1 files, 0 folders, 0.0 MB) in 1 ms
+[ 227764.7   main] drag 1: DoDragDrop start
+[ 229313.5 t10900] drag 1: GetData(FileGroupDescriptorW) at 1549 ms
+[ 229314.2 t10900] drag 1: GetData(FileContents, lindex 0) at 1550 ms: small.txt
+[ 229315.0 t10900] stream 1: created on its own MTA thread, proxy handed to Explorer
+[ 229622.1   main] drag 1: DoDragDrop returned DROP, effect 0, after 1857 ms
+[ 231615.6 t20940] start_drag: 1 selected
+[ 231617.0 t26012] pre-drag listing: 1 entries (1 files, 0 folders, 0.0 MB) in 1 ms
+[ 231617.4   main] drag 2: DoDragDrop start
+[ 232568.4   main] drag 2: DoDragDrop returned DROP, effect 0, after 951 ms
+[ 232568.6   main] drag 2: data object released
+[ 241811.4 t20940] start_drag: 1 selected
+[ 241813.1 t26012] pre-drag listing: 1 entries (1 files, 0 folders, 0.0 MB) in 2 ms
+[ 241813.6   main] drag 3: DoDragDrop start
+[ 242215.8 t25664] drag 3: GetData(FileGroupDescriptorW) at 402 ms
+[ 242219.0 t25664] drag 3: SetData(DropDescription) = 1
+[ 242233.2 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242243.4 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242245.7 t25664] drag 3: SetData(Preferred DropEffect) = 0
+[ 242252.0 t25664] drag 3: GetData(FileGroupDescriptorW) at 439 ms
+[ 242254.8 t25664] drag 3: SetData(DropDescription) = 1
+[ 242262.3 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242263.6 t25664] drag 3: GetData(FileGroupDescriptorW) at 450 ms
+[ 242266.4 t25664] drag 3: SetData(DropDescription) = 1
+[ 242393.9 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242394.5 t25664] drag 3: GetData(FileGroupDescriptorW) at 581 ms
+[ 242396.5 t25664] drag 3: SetData(DropDescription) = 1
+[ 242413.6 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242414.1 t25664] drag 3: GetData(FileGroupDescriptorW) at 601 ms
+[ 242416.0 t25664] drag 3: SetData(DropDescription) = 1
+[ 242490.7 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242491.5 t25664] drag 3: GetData(FileGroupDescriptorW) at 678 ms
+[ 242494.0 t25664] drag 3: SetData(DropDescription) = 1
+[ 242956.7 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 242957.1 t25664] drag 3: GetData(FileGroupDescriptorW) at 1144 ms
+[ 242959.8 t25664] drag 3: SetData(DropDescription) = 1
+[ 243053.4 t25664] drag 3: SetData(DropDescription) = 4294967295
+[ 243054.0 t25664] drag 3: GetData(FileGroupDescriptorW) at 1240 ms
+[ 243056.0 t25664] drag 3: SetData(DropDescription) = 1
+[ 243766.2 t25664] drag 3: GetAsyncMode -> TRUE
+[ 243766.6 t25664] drag 3: StartOperation (Explorer extracts in the background)
+[ 243768.0 t25664] drag 3: SetData(Logical Performed DropEffect) = 1
+[ 243770.3   main] drag 3: DoDragDrop returned DROP, effect 1, after 1956 ms
+[ 243837.6 t25664] drag 3: GetData(FileGroupDescriptorW) at 2024 ms
+[ 243840.2 t25664] drag 3: GetData(FileContents, lindex 0) at 2027 ms: small.txt
+[ 243840.8 t25664] stream 2: created on its own MTA thread, proxy handed to Explorer
+[ 243842.6 t25664] stream 2: first Read(36) on thread t25664, starting SFTP read
+[ 243848.7 t25664] stream 2: EOF at 36 bytes, 0.0 s
+[ 243849.5 t25664] stream 2: unsupported Seek(0, 0) at pos 36
+[ 243853.2 t25664] stream 2: released (done) at 36 of 36 bytes after 2 Read calls
+[ 243866.0 t25664] drag 3: SetData(Performed DropEffect) = 1
+[ 243866.7 t25664] drag 3: SetData(Logical Performed DropEffect) = 1
+[ 243948.2 t25664] drag 3: EndOperation hr=HRESULT(0x00000000) effects=1 after 2135 ms
+[ 243948.7 t25664] drag 3: data object released
+[ 263417.5 t26012] start_drag: 1 selected
+[ 263418.9  t2232] pre-drag listing: 1 entries (1 files, 0 folders, 209.7 MB) in 1 ms
+[ 263419.4   main] drag 4: DoDragDrop start
+[ 263748.3 t25664] drag 4: GetData(FileGroupDescriptorW) at 329 ms
+[ 263751.0 t25664] drag 4: SetData(DropDescription) = 1
+[ 263768.7 t25664] drag 4: SetData(DropDescription) = 4294967295
+[ 263772.8 t25664] drag 4: GetData(FileGroupDescriptorW) at 354 ms
+[ 263775.6 t25664] drag 4: SetData(DropDescription) = 1
+[ 264256.3 t25664] drag 4: SetData(DropDescription) = 4294967295
+[ 264256.9 t25664] drag 4: GetData(FileGroupDescriptorW) at 838 ms
+[ 264259.1 t25664] drag 4: SetData(DropDescription) = 1
+[ 264924.1 t25664] drag 4: GetAsyncMode -> TRUE
+[ 264924.4 t25664] drag 4: StartOperation (Explorer extracts in the background)
+[ 264925.7 t25664] drag 4: SetData(Logical Performed DropEffect) = 1
+[ 264927.6   main] drag 4: DoDragDrop returned DROP, effect 1, after 1508 ms
+[ 264976.6 t25664] drag 4: GetData(FileGroupDescriptorW) at 1557 ms
+[ 264978.6 t25664] drag 4: GetData(FileContents, lindex 0) at 1559 ms: big-200M.bin
+[ 264979.1 t25664] stream 3: created on its own MTA thread, proxy handed to Explorer
+[ 264983.3 t25664] stream 3: first Read(262144) on thread t25664, starting SFTP read
+[ 367405.7 t25664] stream 3: EOF at 209715200 bytes, 102.4 s
+[ 367406.6 t25664] stream 3: unsupported Seek(0, 0) at pos 209715200
+[ 367409.3 t25664] stream 3: released (done) at 209715200 of 209715200 bytes after 801 Read calls
+[ 367428.3 t25664] drag 4: SetData(Performed DropEffect) = 1
+[ 367429.7 t25664] drag 4: SetData(Logical Performed DropEffect) = 1
+[ 367462.1 t25664] drag 4: EndOperation hr=HRESULT(0x00000000) effects=1 after 104043 ms
+[ 367462.8 t25664] drag 4: data object released
+[ 554133.4 t20940] start_drag: 1 selected
+[ 554175.0 t26012] pre-drag listing: 22 entries (16 files, 6 folders, 1.2 MB) in 42 ms
+[ 554175.5   main] drag 5: DoDragDrop start
+[ 554405.4   t756] drag 5: SetData(DropDescription) = 4294967295
+[ 554405.8   t756] drag 5: SetData(Preferred DropEffect) = 0
+[ 554406.6   t756] drag 5: GetData(FileGroupDescriptorW) at 231 ms
+[ 554411.7   t756] drag 5: SetData(DropDescription) = 1
+[ 554421.1   t756] drag 5: SetData(DropDescription) = 4294967295
+[ 554426.1   t756] drag 5: GetData(FileGroupDescriptorW) at 251 ms
+[ 554430.3   t756] drag 5: SetData(DropDescription) = 1
+[ 554443.0   t756] drag 5: SetData(DropDescription) = 4294967295
+[ 554443.5   t756] drag 5: GetData(FileGroupDescriptorW) at 268 ms
+[ 554446.4   t756] drag 5: SetData(DropDescription) = 1
+[ 554516.2   t756] drag 5: SetData(DropDescription) = 4294967295
+[ 554517.1   t756] drag 5: GetData(FileGroupDescriptorW) at 342 ms
+[ 554519.7   t756] drag 5: SetData(DropDescription) = 1
+[ 554542.6   t756] drag 5: SetData(DropDescription) = 4294967295
+[ 554543.2   t756] drag 5: GetData(FileGroupDescriptorW) at 368 ms
+[ 554545.6   t756] drag 5: SetData(DropDescription) = 1
+[ 555086.1   t756] drag 5: SetData(DropDescription) = 4294967295
+[ 555086.7   t756] drag 5: GetData(FileGroupDescriptorW) at 911 ms
+[ 555089.3   t756] drag 5: SetData(DropDescription) = 1
+[ 555537.9   t756] drag 5: GetAsyncMode -> TRUE
+[ 555538.3   t756] drag 5: StartOperation (Explorer extracts in the background)
+[ 555539.4   t756] drag 5: SetData(Logical Performed DropEffect) = 1
+[ 555541.3   main] drag 5: DoDragDrop returned DROP, effect 1, after 1366 ms
+[ 555602.5   t756] drag 5: GetData(FileGroupDescriptorW) at 1427 ms
+[ 555616.5   t756] drag 5: GetData(FileContents, lindex 3) at 1441 ms: tree\a\b\file-3.bin
+[ 555617.1   t756] stream 4: created on its own MTA thread, proxy handed to Explorer
+[ 555620.4   t756] stream 4: first Read(262144) on thread t756, starting SFTP read
+[ 555683.9   t756] stream 4: EOF at 120000 bytes, 0.1 s
+[ 555686.2   t756] stream 4: unsupported Seek(0, 0) at pos 120000
+[ 555689.6   t756] stream 4: released (done) at 120000 of 120000 bytes after 2 Read calls
+[ 555691.5   t756] drag 5: GetData(FileContents, lindex 4) at 1516 ms: tree\a\b\file-2.bin
+[ 555692.2   t756] stream 5: created on its own MTA thread, proxy handed to Explorer
+[ 555693.7   t756] stream 5: first Read(262144) on thread t756, starting SFTP read
+[ 555749.7   t756] stream 5: EOF at 80000 bytes, 0.1 s
+[ 555751.6   t756] stream 5: unsupported Seek(0, 0) at pos 80000
+[ 555754.0   t756] stream 5: released (done) at 80000 of 80000 bytes after 2 Read calls
+[ 555755.6   t756] drag 5: GetData(FileContents, lindex 5) at 1580 ms: tree\a\b\file-1.bin
+[ 555756.2   t756] stream 6: created on its own MTA thread, proxy handed to Explorer
+[ 555757.6   t756] stream 6: first Read(262144) on thread t756, starting SFTP read
+[ 555781.6   t756] stream 6: EOF at 40000 bytes, 0.0 s
+[ 555783.7   t756] stream 6: unsupported Seek(0, 0) at pos 40000
+[ 555786.5   t756] stream 6: released (done) at 40000 of 40000 bytes after 2 Read calls
+[ 555788.6   t756] drag 5: GetData(FileContents, lindex 7) at 1613 ms: tree\a\b\c\file-3.bin
+[ 555789.2   t756] stream 7: created on its own MTA thread, proxy handed to Explorer
+[ 555791.3   t756] stream 7: first Read(262144) on thread t756, starting SFTP read
+[ 555867.1   t756] stream 7: EOF at 120000 bytes, 0.1 s
+[ 555869.2   t756] stream 7: unsupported Seek(0, 0) at pos 120000
+[ 555872.2   t756] stream 7: released (done) at 120000 of 120000 bytes after 2 Read calls
+[ 555873.6   t756] drag 5: GetData(FileContents, lindex 8) at 1698 ms: tree\a\b\c\file-2.bin
+[ 555874.2   t756] stream 8: created on its own MTA thread, proxy handed to Explorer
+[ 555875.7   t756] stream 8: first Read(262144) on thread t756, starting SFTP read
+[ 555926.4   t756] stream 8: EOF at 80000 bytes, 0.1 s
+[ 555928.6   t756] stream 8: unsupported Seek(0, 0) at pos 80000
+[ 555931.4   t756] stream 8: released (done) at 80000 of 80000 bytes after 2 Read calls
+[ 555933.4   t756] drag 5: GetData(FileContents, lindex 9) at 1758 ms: tree\a\b\c\file-1.bin
+[ 555934.0   t756] stream 9: created on its own MTA thread, proxy handed to Explorer
+[ 555935.6   t756] stream 9: first Read(262144) on thread t756, starting SFTP read
+[ 555964.5   t756] stream 9: EOF at 40000 bytes, 0.0 s
+[ 555967.1   t756] stream 9: unsupported Seek(0, 0) at pos 40000
+[ 555970.4   t756] stream 9: released (done) at 40000 of 40000 bytes after 2 Read calls
+[ 555972.3   t756] drag 5: GetData(FileContents, lindex 10) at 1797 ms: tree\a\file-3.bin
+[ 555973.0   t756] stream 10: created on its own MTA thread, proxy handed to Explorer
+[ 555975.2   t756] stream 10: first Read(262144) on thread t756, starting SFTP read
+[ 556050.3   t756] stream 10: EOF at 120000 bytes, 0.1 s
+[ 556052.3   t756] stream 10: unsupported Seek(0, 0) at pos 120000
+[ 556055.1   t756] stream 10: released (done) at 120000 of 120000 bytes after 2 Read calls
+[ 556056.8   t756] drag 5: GetData(FileContents, lindex 11) at 1881 ms: tree\a\file-2.bin
+[ 556057.5   t756] stream 11: created on its own MTA thread, proxy handed to Explorer
+[ 556059.2   t756] stream 11: first Read(262144) on thread t756, starting SFTP read
+[ 556104.1   t756] stream 11: EOF at 80000 bytes, 0.0 s
+[ 556106.0   t756] stream 11: unsupported Seek(0, 0) at pos 80000
+[ 556108.7   t756] stream 11: released (done) at 80000 of 80000 bytes after 2 Read calls
+[ 556110.4   t756] drag 5: GetData(FileContents, lindex 12) at 1935 ms: tree\a\file-1.bin
+[ 556111.0   t756] stream 12: created on its own MTA thread, proxy handed to Explorer
+[ 556112.4   t756] stream 12: first Read(262144) on thread t756, starting SFTP read
+[ 556148.0   t756] stream 12: EOF at 40000 bytes, 0.0 s
+[ 556150.4   t756] stream 12: unsupported Seek(0, 0) at pos 40000
+[ 556153.5   t756] stream 12: released (done) at 40000 of 40000 bytes after 2 Read calls
+[ 556155.9   t756] drag 5: GetData(FileContents, lindex 14) at 1981 ms: tree\spaces and ünïcödé\naïve résumé.txt
+[ 556156.6   t756] stream 13: created on its own MTA thread, proxy handed to Explorer
+[ 556158.1   t756] stream 13: first Read(262144) on thread t756, starting SFTP read
+[ 556163.8   t756] stream 13: EOF at 5 bytes, 0.0 s
+[ 556165.2   t756] stream 13: unsupported Seek(0, 0) at pos 5
+[ 556168.3   t756] stream 13: released (done) at 5 of 5 bytes after 2 Read calls
+[ 556170.5   t756] drag 5: GetData(FileContents, lindex 15) at 1995 ms: tree\spaces and ünïcödé\file-3.bin
+[ 556171.3   t756] stream 14: created on its own MTA thread, proxy handed to Explorer
+[ 556173.3   t756] stream 14: first Read(262144) on thread t756, starting SFTP read
+[ 556251.0   t756] stream 14: EOF at 120000 bytes, 0.1 s
+[ 556252.9   t756] stream 14: unsupported Seek(0, 0) at pos 120000
+[ 556255.9   t756] stream 14: released (done) at 120000 of 120000 bytes after 2 Read calls
+[ 556258.0   t756] drag 5: GetData(FileContents, lindex 16) at 2083 ms: tree\spaces and ünïcödé\file-2.bin
+[ 556258.8   t756] stream 15: created on its own MTA thread, proxy handed to Explorer
+[ 556260.2   t756] stream 15: first Read(262144) on thread t756, starting SFTP read
+[ 556303.9   t756] stream 15: EOF at 80000 bytes, 0.0 s
+[ 556306.6   t756] stream 15: unsupported Seek(0, 0) at pos 80000
+[ 556309.4   t756] stream 15: released (done) at 80000 of 80000 bytes after 2 Read calls
+[ 556311.1   t756] drag 5: GetData(FileContents, lindex 17) at 2136 ms: tree\spaces and ünïcödé\file-1.bin
+[ 556311.7   t756] stream 16: created on its own MTA thread, proxy handed to Explorer
+[ 556313.5   t756] stream 16: first Read(262144) on thread t756, starting SFTP read
+[ 556349.8   t756] stream 16: EOF at 40000 bytes, 0.0 s
+[ 556351.9   t756] stream 16: unsupported Seek(0, 0) at pos 40000
+[ 556355.1   t756] stream 16: released (done) at 40000 of 40000 bytes after 2 Read calls
+[ 556356.9   t756] drag 5: GetData(FileContents, lindex 18) at 2182 ms: tree\file-3.bin
+[ 556357.5   t756] stream 17: created on its own MTA thread, proxy handed to Explorer
+[ 556359.3   t756] stream 17: first Read(262144) on thread t756, starting SFTP read
+[ 556433.5   t756] stream 17: EOF at 120000 bytes, 0.1 s
+[ 556435.8   t756] stream 17: unsupported Seek(0, 0) at pos 120000
+[ 556438.2   t756] stream 17: released (done) at 120000 of 120000 bytes after 2 Read calls
+[ 556440.7   t756] drag 5: GetData(FileContents, lindex 20) at 2265 ms: tree\file-2.bin
+[ 556441.4   t756] stream 18: created on its own MTA thread, proxy handed to Explorer
+[ 556443.7   t756] stream 18: first Read(262144) on thread t756, starting SFTP read
+[ 556487.7   t756] stream 18: EOF at 80000 bytes, 0.0 s
+[ 556490.3   t756] stream 18: unsupported Seek(0, 0) at pos 80000
+[ 556493.2   t756] stream 18: released (done) at 80000 of 80000 bytes after 2 Read calls
+[ 556494.8   t756] drag 5: GetData(FileContents, lindex 21) at 2319 ms: tree\file-1.bin
+[ 556495.5   t756] stream 19: created on its own MTA thread, proxy handed to Explorer
+[ 556496.8   t756] stream 19: first Read(262144) on thread t756, starting SFTP read
+[ 556534.0   t756] stream 19: EOF at 40000 bytes, 0.0 s
+[ 556536.3   t756] stream 19: unsupported Seek(0, 0) at pos 40000
+[ 556541.7   t756] stream 19: released (done) at 40000 of 40000 bytes after 2 Read calls
+[ 556542.3   t756] drag 5: SetData(Performed DropEffect) = 1
+[ 556542.8   t756] drag 5: SetData(Logical Performed DropEffect) = 1
+[ 556544.0   t756] drag 5: EndOperation hr=HRESULT(0x00000000) effects=1 after 2369 ms
+[ 556544.4   t756] drag 5: data object released
+[ 564728.3  t2232] start_drag: 1 selected
+[ 564803.1  t2232] pre-drag listing: 14 entries (1 files, 13 folders, 0.1 MB) in 75 ms
+[ 564803.6   main] drag 6: DoDragDrop start
+[ 564914.4   t756] drag 6: GetData(FileGroupDescriptorW) at 111 ms
+[ 564914.8   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 564914.9   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 564915.0   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 564915.1   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 564915.2   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 564915.3   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 564918.0   t756] drag 6: SetData(DropDescription) = 1
+[ 564921.4   t756] drag 6: SetData(DropDescription) = 4294967295
+[ 564926.0   t756] drag 6: SetData(DropDescription) = 4294967295
+[ 564927.6   t756] drag 6: SetData(Preferred DropEffect) = 0
+[ 564931.6   t756] drag 6: GetData(FileGroupDescriptorW) at 128 ms
+[ 564931.9   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 564932.0   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 564932.1   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 564932.2   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 564932.3   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 564932.4   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 564934.7   t756] drag 6: SetData(DropDescription) = 1
+[ 564936.6   t756] drag 6: SetData(DropDescription) = 4294967295
+[ 564937.0   t756] drag 6: GetData(FileGroupDescriptorW) at 134 ms
+[ 564937.2   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 564937.3   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 564937.3   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 564937.4   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 564937.5   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 564937.6   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 564940.3   t756] drag 6: SetData(DropDescription) = 1
+[ 565059.7   t756] drag 6: SetData(DropDescription) = 4294967295
+[ 565060.3   t756] drag 6: GetData(FileGroupDescriptorW) at 257 ms
+[ 565060.5   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 565060.6   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 565060.7   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 565060.8   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 565060.8   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 565060.9   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 565063.3   t756] drag 6: SetData(DropDescription) = 1
+[ 565076.1   t756] drag 6: SetData(DropDescription) = 4294967295
+[ 565076.6   t756] drag 6: GetData(FileGroupDescriptorW) at 273 ms
+[ 565076.8   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 565076.9   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 565077.0   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 565077.0   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 565077.1   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 565077.2   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 565079.5   t756] drag 6: SetData(DropDescription) = 1
+[ 565300.5   t756] drag 6: SetData(DropDescription) = 4294967295
+[ 565301.1   t756] drag 6: GetData(FileGroupDescriptorW) at 498 ms
+[ 565301.2   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 565301.3   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 565301.4   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 565301.5   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 565301.6   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 565301.7   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 565304.0   t756] drag 6: SetData(DropDescription) = 1
+[ 566062.4   t756] drag 6: GetAsyncMode -> TRUE
+[ 566062.8   t756] drag 6: StartOperation (Explorer extracts in the background)
+[ 566064.3   t756] drag 6: SetData(Logical Performed DropEffect) = 1
+[ 566066.2   main] drag 6: DoDragDrop returned DROP, effect 1, after 1262 ms
+[ 566116.9   t756] drag 6: GetData(FileGroupDescriptorW) at 1313 ms
+[ 566117.1   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8
+[ 566117.2   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9
+[ 566117.4   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10
+[ 566117.5   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11
+[ 566117.7   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12
+[ 566117.8   t756] drag 6: name longer than 259 UTF-16 units, truncated: deep\folder-with-a-fairly-long-name-1\folder-with-a-fairly-long-name-2\folder-with-a-fairly-long-name-3\folder-with-a-fairly-long-name-4\folder-with-a-fairly-long-name-5\folder-with-a-fairly-long-name-6\folder-with-a-fairly-long-name-7\folder-with-a-fairly-long-name-8\folder-with-a-fairly-long-name-9\folder-with-a-fairly-long-name-10\folder-with-a-fairly-long-name-11\folder-with-a-fairly-long-name-12\deep-file.txt
+[ 570085.7   t756] drag 6: EndOperation hr=HRESULT(0x800704C7) effects=0 after 5282 ms
+[ 570086.0   t756] drag 6: data object released
+[ 953279.9  t2232] start_drag: 1 selected
+[ 953281.8 t20940] pre-drag listing: 1 entries (1 files, 0 folders, 209.7 MB) in 2 ms
+[ 953282.3   main] drag 7: DoDragDrop start
+[ 953480.6 t24636] drag 7: SetData(DropDescription) = 4294967295
+[ 953482.9 t24636] drag 7: SetData(Preferred DropEffect) = 0
+[ 953490.5 t24636] drag 7: GetData(FileGroupDescriptorW) at 208 ms
+[ 953495.2 t24636] drag 7: SetData(DropDescription) = 1
+[ 953599.9 t24636] drag 7: SetData(DropDescription) = 4294967295
+[ 953600.4 t24636] drag 7: GetData(FileGroupDescriptorW) at 318 ms
+[ 953602.6 t24636] drag 7: SetData(DropDescription) = 1
+[ 954268.1 t24636] drag 7: GetAsyncMode -> TRUE
+[ 954268.9 t24636] drag 7: StartOperation (Explorer extracts in the background)
+[ 954270.3 t24636] drag 7: SetData(Logical Performed DropEffect) = 1
+[ 954272.3   main] drag 7: DoDragDrop returned DROP, effect 1, after 990 ms
+[ 954337.1 t24636] drag 7: GetData(FileGroupDescriptorW) at 1055 ms
+[ 956321.9 t24636] drag 7: GetData(FileContents, lindex 0) at 3040 ms: big-200M.bin
+[ 956323.2 t24636] stream 20: created on its own MTA thread, proxy handed to Explorer
+[ 956356.4 t24636] stream 20: first Read(262144) on thread t24636, starting SFTP read
+[ 957357.0 t12584] stream 20: simulated failure after 50135040 bytes -> returning STG_E_READFAULT to Explorer
+[ 957358.5 t12584] stream 20: unsupported Seek(0, 0) at pos 49873920
+[ 957367.9 t12584] stream 20: released (failed) at 49873920 of 209715200 bytes after 191 Read calls
+[ 964292.7 t12584] drag 7: EndOperation hr=HRESULT(0x8003001E) effects=0 after 11011 ms
+[ 964293.4 t12584] drag 7: data object released
+[ 987315.4 t25548] start_drag: 1 selected
+[ 987316.9  t2232] pre-drag listing: 1 entries (1 files, 0 folders, 2147.5 MB) in 1 ms
+[ 987317.4   main] drag 8: DoDragDrop start
+[ 987547.3 t12584] drag 8: GetData(FileGroupDescriptorW) at 230 ms
+[ 987550.2 t12584] drag 8: SetData(DropDescription) = 1
+[ 987553.4 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987559.0 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987560.7 t12584] drag 8: SetData(Preferred DropEffect) = 0
+[ 987567.2 t12584] drag 8: GetData(FileGroupDescriptorW) at 250 ms
+[ 987569.9 t12584] drag 8: SetData(DropDescription) = 1
+[ 987576.0 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987576.6 t12584] drag 8: GetData(FileGroupDescriptorW) at 259 ms
+[ 987579.5 t12584] drag 8: SetData(DropDescription) = 1
+[ 987584.1 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987584.7 t12584] drag 8: GetData(FileGroupDescriptorW) at 267 ms
+[ 987587.3 t12584] drag 8: SetData(DropDescription) = 1
+[ 987648.3 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987649.0 t12584] drag 8: GetData(FileGroupDescriptorW) at 332 ms
+[ 987651.7 t12584] drag 8: SetData(DropDescription) = 1
+[ 987664.3 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987664.8 t12584] drag 8: GetData(FileGroupDescriptorW) at 348 ms
+[ 987667.1 t12584] drag 8: SetData(DropDescription) = 1
+[ 987760.2 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987760.7 t12584] drag 8: GetData(FileGroupDescriptorW) at 444 ms
+[ 987763.8 t12584] drag 8: SetData(DropDescription) = 1
+[ 987768.3 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987768.8 t12584] drag 8: GetData(FileGroupDescriptorW) at 452 ms
+[ 987771.0 t12584] drag 8: SetData(DropDescription) = 1
+[ 987800.2 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987800.9 t12584] drag 8: GetData(FileGroupDescriptorW) at 484 ms
+[ 987803.1 t12584] drag 8: SetData(DropDescription) = 1
+[ 987808.2 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 987808.8 t12584] drag 8: GetData(FileGroupDescriptorW) at 492 ms
+[ 987810.8 t12584] drag 8: SetData(DropDescription) = 1
+[ 991333.8 t27108] drag 8: WATCHDOG fired (button up 3.0 s), set cancel flag, posted Escape to capture window Some(0x120a12)
+[ 991334.1   main] drag 8: QueryContinueDrag -> CANCEL (escape=true, watchdog=true)
+[ 991334.9 t12584] drag 8: SetData(DropDescription) = 4294967295
+[ 991335.9   main] drag 8: DoDragDrop returned CANCEL, effect 0, after 4018 ms
+[ 991336.1   main] drag 8: data object released
+[1009027.3 t25548] listed /home/akshay/dragtest: 6 entries, 1 READDIR calls, 49 ms
+[1011058.0  t2232] listed /home/akshay/dragtest/many: 100000 entries, 1001 READDIR calls, 5571 ms
+[1023693.2 t25548] listed /home/akshay: 11 entries, 1 READDIR calls, 6 ms
+[1031250.7  t2232] listed /home/akshay/dragtest: 6 entries, 1 READDIR calls, 5 ms
+[1033095.4 t25548] start_drag: 1 selected
+[1033096.9  t2232] pre-drag listing: 1 entries (1 files, 0 folders, 0.0 MB) in 1 ms
+[1033097.4   main] drag 9: DoDragDrop start
+[1033353.8 t12584] drag 9: SetData(DropDescription) = 4294967295
+[1033355.0 t12584] drag 9: SetData(Preferred DropEffect) = 0
+[1033359.7 t12584] drag 9: GetData(FileGroupDescriptorW) at 262 ms
+[1033362.6 t12584] drag 9: SetData(DropDescription) = 1
+[1033466.8 t12584] drag 9: SetData(DropDescription) = 4294967295
+[1033467.4 t12584] drag 9: GetData(FileGroupDescriptorW) at 370 ms
+[1033469.5 t12584] drag 9: SetData(DropDescription) = 1
+[1034987.8 t12584] drag 9: SetData(DropDescription) = 4294967295
+[1034988.4 t12584] drag 9: GetData(FileGroupDescriptorW) at 1891 ms
+[1034990.7 t12584] drag 9: SetData(DropDescription) = 1
+[1035911.0 t12584] drag 9: SetData(DropDescription) = 4294967295
+[1037213.2 t26144] drag 9: WATCHDOG fired (button up 3.0 s), set cancel flag, posted Escape to capture window Some(0x120a12)
+[1037213.8   main] drag 9: QueryContinueDrag -> CANCEL (escape=true, watchdog=true)
+[1037214.9   main] drag 9: DoDragDrop returned CANCEL, effect 0, after 4117 ms
+[1037215.2   main] drag 9: data object released
+[1039018.1  t2232] start_drag: 1 selected
+[1039019.6 t25548] pre-drag listing: 1 entries (1 files, 0 folders, 0.0 MB) in 2 ms
+[1039020.1   main] drag 10: DoDragDrop start
+[1039109.4   main] drag 10: DoDragDrop returned DROP, effect 0, after 89 ms
+[1039109.6   main] drag 10: data object released
+[1039901.1 t25548] start_drag: 1 selected
+[1039902.6  t2232] pre-drag listing: 1 entries (1 files, 0 folders, 0.0 MB) in 2 ms
+[1039903.1   main] drag 11: DoDragDrop start
+[1040141.8 t12584] drag 11: GetData(FileGroupDescriptorW) at 239 ms
+[1040144.6 t12584] drag 11: SetData(DropDescription) = 1
+[1040154.1 t12584] drag 11: SetData(DropDescription) = 4294967295
+[1040158.4 t12584] drag 11: GetData(FileGroupDescriptorW) at 255 ms
+[1040160.9 t12584] drag 11: SetData(DropDescription) = 1
+[1040169.0 t12584] drag 11: SetData(DropDescription) = 4294967295
+[1040169.7 t12584] drag 11: GetData(FileGroupDescriptorW) at 267 ms
+[1040172.3 t12584] drag 11: SetData(DropDescription) = 1
+[1040176.9 t12584] drag 11: SetData(DropDescription) = 4294967295
+[1040177.5 t12584] drag 11: GetData(FileGroupDescriptorW) at 274 ms
+[1040180.3 t12584] drag 11: SetData(DropDescription) = 1
+[1040224.9 t12584] drag 11: SetData(DropDescription) = 4294967295
+[1040225.6 t12584] drag 11: GetData(FileGroupDescriptorW) at 323 ms
+[1040228.0 t12584] drag 11: SetData(DropDescription) = 1
+[1040233.0 t12584] drag 11: SetData(DropDescription) = 4294967295
+[1040233.7 t12584] drag 11: GetData(FileGroupDescriptorW) at 331 ms
+[1040236.2 t12584] drag 11: SetData(DropDescription) = 1
+[1040684.9 t12584] drag 11: GetAsyncMode -> TRUE
+[1040685.2 t12584] drag 11: StartOperation (Explorer extracts in the background)
+[1040687.0 t12584] drag 11: SetData(Logical Performed DropEffect) = 1
+[1040689.5   main] drag 11: DoDragDrop returned DROP, effect 1, after 786 ms
+[1040745.0 t12584] drag 11: GetData(FileGroupDescriptorW) at 842 ms
+[1042751.1 t12584] drag 11: GetData(FileContents, lindex 0) at 2848 ms: small.txt
+[1042752.2 t12584] stream 21: created on its own MTA thread, proxy handed to Explorer
+[1042754.7 t12584] stream 21: first Read(36) on thread t12584, starting SFTP read
+[1042762.4 t12584] stream 21: EOF at 36 bytes, 0.0 s
+[1042763.2 t12584] stream 21: unsupported Seek(0, 0) at pos 36
+[1042766.5 t12584] stream 21: released (done) at 36 of 36 bytes after 2 Read calls
+[1042858.1 t12584] drag 11: SetData(Performed DropEffect) = 1
+[1042858.7 t12584] drag 11: SetData(Logical Performed DropEffect) = 1
+[1042915.0 t12584] drag 11: EndOperation hr=HRESULT(0x00000000) effects=1 after 3012 ms
+[1042915.4 t12584] drag 11: data object released
+[exited with code 127]

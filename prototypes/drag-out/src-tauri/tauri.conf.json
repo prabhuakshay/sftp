@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "drag-out-prototype",
+  "version": "0.0.0",
+  "identifier": "com.prabhuakshay.sftp.dragout-prototype",
+  "build": {
+    "beforeDevCommand": "npm run vite",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run vite-build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{ "title": "PROTOTYPE: drag-out test build", "width": 1400, "height": 900 }],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": false, "icon": ["icons/icon.ico"] }
+}
