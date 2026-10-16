@@ -16,6 +16,10 @@ _Avoid_: Favourite, pinned folder, shortcut
 Connecting to a server typed as `user@host[:port]` that has no Host entry. Nothing about it is saved.
 _Avoid_: Ad hoc connection, temporary site
 
+**Edit**:
+A remote file the user has opened in their own editor. While the Edit lasts, every save to its local copy is uploaded back to the Host. Edits belong to the app, not to a Tab.
+_Avoid_: Edit session, checkout, temp file, sync
+
 **Tab**:
 One browsing view showing a single Host at a current remote folder. Several Tabs may show the same Host.
 _Avoid_: Session, window, pane
