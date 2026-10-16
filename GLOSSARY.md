@@ -21,12 +21,16 @@ A remote file the user has opened in their own editor. While the Edit lasts, eve
 _Avoid_: Edit session, checkout, temp file, sync
 
 **Batch**:
-The files moved by one upload, download or drop. Conflicts are answered and failures are summarised per Batch.
+The files the app moves for one upload, download or drop. Conflicts are answered and failures are summarised per Batch.
 _Avoid_: Job, task, transfer group
 
 **Transfer**:
-One upload or download the user asked for, shown as a single row in the transfer dock. A folder is one Transfer, however many files it holds.
+One upload or download the user asked for, shown as a single row in the transfer dock. A folder is one Transfer, however many files it holds, and so is a Drag-out.
 _Avoid_: Job, task, queue item
+
+**Drag-out**:
+Dragging remote files from a Tab into Windows Explorer. Explorer does the copy and the app only supplies the files, so a Drag-out is one Transfer but never a Batch.
+_Avoid_: Drag download, export
 
 **Tab**:
 One browsing view showing a single Host at a current remote folder. Several Tabs may show the same Host.
